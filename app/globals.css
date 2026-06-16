@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/* ----------------------------------------------------------------------------
+   Averos design tokens (Tailwind v4 @theme)
+   Custom colors become utilities automatically, e.g.
+   `bg-navy-deep`, `text-accent`, `border-accent`, `from-navy-mid`.
+---------------------------------------------------------------------------- */
+@theme {
+  /* Brand navies — deep gradient for hero / dashboard / footer */
+  --color-navy-deep: #0b1b3b;
+  --color-navy-mid: #11295c;
+  /* Heading navy on light sections */
+  --color-navy: #1b3a6b;
+  /* Bright green accent */
+  --color-accent: #34d685;
+  /* Cyan used for the hero analysis polygon + glow */
+  --color-glow-cyan: #22d3ee;
+
+  /* Fonts (wired to next/font CSS variables in app/layout.tsx) */
+  --font-display: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-white font-sans text-slate-600 antialiased;
+  }
+
+  /* Display font for all headings */
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight;
+  }
+}
+
+/* Radial navy gradient — lighter at top-center, darkest toward the edges. */
+@utility bg-navy-gradient {
+  background:
+    radial-gradient(
+      120% 120% at 50% 0%,
+      var(--color-navy-mid) 0%,
+      var(--color-navy-deep) 70%
+    );
+}
+
+/* Soft cyan glow used on the hero polygon + vertex dots. */
+@utility glow-cyan {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-glow-cyan) 70%, transparent))
+    drop-shadow(0 0 14px color-mix(in srgb, var(--color-glow-cyan) 45%, transparent));
+}
