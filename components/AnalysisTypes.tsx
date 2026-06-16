@@ -7,6 +7,7 @@ import { eudrAnalyses, type AnalysisKey } from "@/lib/data";
 import { usePlotStore } from "@/lib/plotStore";
 import type { FeatureCollection } from "@/lib/geo";
 import { validateGeometry } from "@/lib/analysisClient";
+import { persistPlots } from "@/lib/plotsClient";
 import { authorize } from "@/lib/usageClient";
 import AddPlotModal from "./AddPlotModal";
 import AnalyzingOverlay from "./AnalyzingOverlay";
@@ -54,6 +55,8 @@ export default function AnalysisTypes({ authed = false }: { authed?: boolean }) 
         return;
       }
       setPlots(plots);
+      // Persist every uploaded plot to the database (best-effort).
+      void persistPlots(plots, "upload");
 
       // Invalid plots (duplicate vertices, self-intersection, …) are kept but
       // never analyzed. Only valid plots count toward area, quota and survey.

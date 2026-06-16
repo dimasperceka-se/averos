@@ -8,6 +8,7 @@ import { analysisByKey } from "@/lib/data";
 import { usePlotStore } from "@/lib/plotStore";
 import type { FeatureCollection, Plot } from "@/lib/geo";
 import { runEudr, validateGeometry } from "@/lib/analysisClient";
+import { persistPlots } from "@/lib/plotsClient";
 import { downloadPlotsExcel } from "@/lib/excel";
 import DashboardNavbar from "@/components/DashboardNavbar";
 import AddPlotModal from "@/components/AddPlotModal";
@@ -52,7 +53,9 @@ export default function DashboardPage() {
     setAddDone(false);
     setAddRunning(true);
     try {
-      addPlots(await validateGeometry(fc, filename));
+      const added = await validateGeometry(fc, filename);
+      addPlots(added);
+      void persistPlots(added, "upload");
     } finally {
       setAddDone(true);
     }
