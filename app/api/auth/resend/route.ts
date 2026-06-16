@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { findByEmail, newToken, updateUser } from "@/lib/server/userStore";
 import { sendVerificationEmail } from "@/lib/server/mailer";
-import { sameOrigin } from "@/lib/server/http";
+import { appBaseUrl, sameOrigin } from "@/lib/server/http";
 
 export const runtime = "nodejs";
 
@@ -25,8 +25,7 @@ export async function POST(req: Request) {
   const verifyToken = newToken();
   await updateUser(user.id, { verifyToken });
 
-  const origin = new URL(req.url).origin;
-  const link = `${origin}/api/auth/verify?token=${verifyToken}`;
+  const link = `${appBaseUrl(req)}/api/auth/verify?token=${verifyToken}`;
   void sendVerificationEmail(user.email, user.name, link).catch((e) =>
     console.error("[mailer] resend failed:", (e as Error).message),
   );

@@ -14,3 +14,20 @@ export function sameOrigin(req: Request): boolean {
     return false;
   }
 }
+
+/**
+ * Canonical public base URL for building links (e.g. email verification).
+ * Behind a reverse proxy `req.url` reflects the internal host/scheme
+ * (http://localhost:PORT), so prefer the explicit APP_URL env, then the
+ * X-Forwarded-* / Host headers set by nginx, and only fall back to req.url.
+ */
+export function appBaseUrl(req: Request): string {
+  const env = process.env.APP_URL;
+  if (env) return env.replace(/\/+$/, "");
+  const u = new URL(req.url);
+  const host =
+    req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? u.host;
+  const proto =
+    req.headers.get("x-forwarded-proto") ?? u.protocol.replace(":", "");
+  return `${proto}://${host}`;
+}

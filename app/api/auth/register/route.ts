@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createUser, findByEmail, newToken } from "@/lib/server/userStore";
 import { hashPassword } from "@/lib/server/password";
 import { sendVerificationEmail } from "@/lib/server/mailer";
-import { sameOrigin } from "@/lib/server/http";
+import { appBaseUrl, sameOrigin } from "@/lib/server/http";
 
 export const runtime = "nodejs";
 
@@ -45,8 +45,7 @@ export async function POST(req: Request) {
     verifyToken,
   });
 
-  const origin = new URL(req.url).origin;
-  const link = `${origin}/api/auth/verify?token=${verifyToken}`;
+  const link = `${appBaseUrl(req)}/api/auth/verify?token=${verifyToken}`;
 
   // Fire-and-forget so registration returns instantly (SMTP can take seconds).
   void sendVerificationEmail(email, name, link).catch((e) =>
