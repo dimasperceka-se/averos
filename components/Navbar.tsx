@@ -59,14 +59,16 @@ export default function Navbar({
               </a>
             </li>
           ))}
-          <li>
-            <Link
-              href="/agriplot"
-              className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
-            >
-              AgriPlot Map
-            </Link>
-          </li>
+          {authed && (
+            <li>
+              <Link
+                href="/agriplot"
+                className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
+              >
+                AgriPlot Map
+              </Link>
+            </li>
+          )}
           <li>
             <Link
               href="/contact"
@@ -140,15 +142,17 @@ export default function Navbar({
                 </a>
               </li>
             ))}
-            <li>
-              <Link
-                href="/agriplot"
-                onClick={() => setOpen(false)}
-                className="block rounded-lg px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50"
-              >
-                AgriPlot Map
-              </Link>
-            </li>
+            {authed && (
+              <li>
+                <Link
+                  href="/agriplot"
+                  onClick={() => setOpen(false)}
+                  className="block rounded-lg px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  AgriPlot Map
+                </Link>
+              </li>
+            )}
             <li>
               <Link
                 href="/contact"

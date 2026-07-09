@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { getSession } from "@/lib/server/session";
 
@@ -8,6 +9,7 @@ const AGRIPLOT_URL = "https://app.sustainit.id/agri-plot-map";
 
 export default async function AgriPlotPage() {
   const session = await getSession();
+  if (!session) redirect("/login?next=/agriplot");
   return (
     <div className="flex h-screen flex-col">
       <Navbar authed={!!session} userName={session?.name} />
