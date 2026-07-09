@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { pricingTiers } from "@/lib/data";
 
 export default function Pricing() {
@@ -88,19 +88,34 @@ export default function Pricing() {
                   </li>
                 ))}
               </ul>
-
-              <a
-                href="/checkout"
-                className={`mt-8 rounded-lg px-5 py-3 text-center text-sm font-semibold transition-colors ${
-                  tier.featured
-                    ? "bg-navy text-white hover:bg-navy-mid"
-                    : "border border-slate-200 text-navy hover:bg-slate-50"
-                }`}
-              >
-                Get started
-              </a>
             </div>
           ))}
+        </div>
+
+        {/* Free-trial banner */}
+        <div className="mt-8 rounded-3xl bg-gradient-to-r from-teal-300 to-emerald-400 px-6 py-14 text-center">
+          <h3 className="text-3xl font-extrabold text-navy sm:text-4xl">
+            Analyze your first plot for free.
+          </h3>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-navy/80">
+            Upload 1 plot (up to 4 hectares) and complete the assessment to
+            receive your first land analysis at no cost.
+          </p>
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <a
+              href="/register"
+              className="inline-flex items-center gap-2 rounded-lg bg-navy px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-navy-mid"
+            >
+              Start free
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </a>
+            <a
+              href="mailto:contact@averos.land"
+              className="rounded-lg border border-navy/40 px-6 py-2.5 text-sm font-semibold text-navy transition-colors hover:bg-white/40"
+            >
+              Contact Our Team
+            </a>
+          </div>
         </div>
       </div>
     </section>

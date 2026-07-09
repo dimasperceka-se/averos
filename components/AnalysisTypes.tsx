@@ -72,7 +72,7 @@ export default function AnalysisTypes({ authed = false }: { authed?: boolean }) 
 
       const total = validPlots.reduce((s, p) => s + p.areaHa, 0);
 
-      // Server decides routing (the 2 ha quota gate is enforced server-side).
+      // Server decides routing (the 4 ha quota gate is enforced server-side).
       const auth = await authorize(total, validPlots.length);
       outcomeRef.current = auth
         ? auth.decision === "paid"
@@ -301,7 +301,7 @@ function PaymentNeededPopup({ onPay, onClose }: { onPay: () => void; onClose: ()
       icon={<Lock className="h-6 w-6 text-amber-600" aria-hidden="true" />}
       tone="bg-amber-100 text-amber-600"
       title="Free quota used up"
-      body="You've analyzed your free 2 ha allowance. Upgrade to keep analyzing more plots and unlock the dashboard with Excel export."
+      body="You've analyzed your free 4 ha allowance. Upgrade to keep analyzing more plots and unlock the dashboard with Excel export."
       primaryLabel="Go to payment"
       onPrimary={onPay}
       onClose={onClose}

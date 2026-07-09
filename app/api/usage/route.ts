@@ -5,10 +5,10 @@ import { sameOrigin } from "@/lib/server/http";
 
 export const runtime = "nodejs";
 
-const FREE_QUOTA_HA = 2;
+const FREE_QUOTA_HA = 4;
 
 /**
- * Server-authoritative routing decision for a submission (the 2 ha free-quota gate
+ * Server-authoritative routing decision for a submission (the 4 ha free-quota gate
  * lives here, not in the browser).
  */
 function decide(user: User, totalArea: number, count: number) {

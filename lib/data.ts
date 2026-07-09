@@ -252,8 +252,8 @@ export const pricingTiers: PricingTier[] = [
   {
     name: "Pay As You Go",
     tagline: "For occasional users with no commitment",
-    currency: "$",
-    amount: "14.9",
+    currency: "Rp",
+    amount: "268.200",
     unit: "/hectare",
     sub: "No monthly fee. No quota.",
     lines: ["Pay only when you run an analysis", "Billed per hectare analyzed"],
@@ -266,13 +266,13 @@ export const pricingTiers: PricingTier[] = [
   },
   {
     name: "Regular",
-    tagline: "For teams running regular monthly analyses",
-    currency: "$",
-    amount: "49",
-    unit: "/month",
+    tagline: "For occasional users with no commitment",
+    currency: "Rp",
+    amount: "882.200",
+    unit: "/bulan",
     sub: "Includes 100 ha quota per month",
     callout: {
-      highlight: "Extra Usage: $0.50/ha if you run out of quota per month",
+      highlight: "Extra Usage: Rp9.000/ha if you run out of quota per month",
       sub: "Unused quota does not roll over",
     },
     features: [
@@ -280,19 +280,18 @@ export const pricingTiers: PricingTier[] = [
       "Dashboard results",
       "GeoJSON upload & map draw",
       "PDF Export",
-      "AI Insights",
+      "AI Insight",
     ],
-    featured: true,
   },
   {
     name: "Professional",
     tagline: "For organizations needing deep supply chain intelligence",
-    currency: "$",
-    amount: "129",
-    unit: "/month",
+    currency: "Rp",
+    amount: "2.321.300",
+    unit: "/bulan",
     sub: "Includes 500 ha quota per month",
     callout: {
-      highlight: "Extra Usage: $0.25/ha if you run out of quota per month",
+      highlight: "Extra Usage: Rp4.500/ha if you run out of quota per month",
       sub: "Unused quota does not roll over",
     },
     features: [
@@ -300,7 +299,7 @@ export const pricingTiers: PricingTier[] = [
       "Buy & export raw data",
       "Supply chain sustainability insight",
       "Insight per business & per country",
-      "Lower overage rate ($0.25/ha)",
+      "Lower overage rate (Rp4.500/ha)",
     ],
   },
 ];
