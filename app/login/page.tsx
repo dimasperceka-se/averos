@@ -51,7 +51,12 @@ function LoginInner() {
       });
       const data = await res.json();
       if (!res.ok) setError(data.error || "Could not sign in.");
-      else router.push(next);
+      else {
+        // Invalidate the client router cache so the destination re-renders
+        // with the new session (otherwise a prefetched logged-out page shows).
+        router.push(next);
+        router.refresh();
+      }
     } catch {
       setError("Network error. Please try again.");
     } finally {

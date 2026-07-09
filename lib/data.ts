@@ -310,7 +310,18 @@ export const pricingTiers: PricingTier[] = [
 /* -------------------------------------------------------------------------- */
 
 export const legalLinks: NavLink[] = [
-  { label: "Privacy Policy", href: "#" },
-  { label: "Terms of Service", href: "#" },
-  { label: "Data Security", href: "#" },
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Data Security", href: "/privacy#security" },
 ];
+
+/** Company / contact details shown in the footer. */
+export const company = {
+  legalName: "PT Niaga Bumi Lestari.",
+  tagline: "Your land data, made actionable.",
+  address: [
+    "Prosperity Tower, 8th Floor Kawasan District 8, SCBD",
+    "LOT 13 Jl. Jend. sudirman kav 52-53, RT.5/RW.3 Senayan,",
+    "Kec. Kebayoran Baru Kota Jakarta Selatan, 12190",
+  ],
+  email: "contact@averos.land",
+};

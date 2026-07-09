@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import GoogleButton from "@/components/GoogleButton";
+import TermsModal from "@/components/TermsModal";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -18,21 +19,13 @@ export default function RegisterPage() {
   const [show, setShow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    if (form.password !== form.confirm) {
-      setError("Passwords do not match.");
-      return;
-    }
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
+  const createAccount = async () => {
     setBusy(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -51,6 +44,31 @@ export default function RegisterPage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (form.password !== form.confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+    // Require agreement to the Terms & Conditions before creating the account.
+    if (!agreed) {
+      setShowTerms(true);
+      return;
+    }
+    void createAccount();
+  };
+
+  const handleAgree = () => {
+    setAgreed(true);
+    setShowTerms(false);
+    void createAccount();
   };
 
   return (
@@ -142,6 +160,18 @@ export default function RegisterPage() {
               </button>
             </form>
 
+            <p className="mt-4 text-center text-xs text-slate-400">
+              By creating an account you agree to our{" "}
+              <button
+                type="button"
+                onClick={() => setShowTerms(true)}
+                className="font-semibold text-navy hover:underline"
+              >
+                Terms &amp; Conditions
+              </button>
+              .
+            </p>
+
             <p className="mt-6 text-center text-sm text-slate-500">
               Already have an account?{" "}
               <Link href="/login" className="font-semibold text-navy hover:underline">
@@ -151,6 +181,12 @@ export default function RegisterPage() {
           </div>
         </div>
       </main>
+
+      <TermsModal
+        open={showTerms}
+        onClose={() => setShowTerms(false)}
+        onAgree={handleAgree}
+      />
     </>
   );
 }
