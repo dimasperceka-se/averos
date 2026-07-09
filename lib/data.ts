@@ -23,9 +23,9 @@ import {
 export type NavLink = { label: string; href: string };
 
 export const navLinks: NavLink[] = [
-  { label: "Features", href: "#features" },
-  { label: "Use Cases", href: "#use-cases" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Features", href: "/#features" },
+  { label: "Use Cases", href: "/#use-cases" },
+  { label: "Pricing", href: "/#pricing" },
 ];
 
 /* -------------------------------------------------------------------------- */

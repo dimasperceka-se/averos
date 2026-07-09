@@ -47,7 +47,7 @@ export default function DashboardNavbar() {
           {navLinks.map((link) => (
             <li key={link.label}>
               <Link
-                href={`/${link.href}`}
+                href={link.href}
                 className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
               >
                 {link.label}
