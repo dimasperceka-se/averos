@@ -233,18 +233,28 @@ export const dashboardInsights: string[] = [
 /*  Pricing                                                                   */
 /* -------------------------------------------------------------------------- */
 
+export type CurrencyKey = "idr" | "usd";
+export const CURRENCIES: Record<CurrencyKey, { symbol: string; label: string }> = {
+  idr: { symbol: "Rp", label: "IDR (Rp)" },
+  usd: { symbol: "$", label: "USD ($)" },
+};
+
+type Price = { amount: string; unit: string };
+
 export type PricingTier = {
   name: string;
   tagline: string;
-  currency: string;
-  amount: string;
-  unit: string;
+  /* Price per currency (currency symbol comes from CURRENCIES). */
+  idr: Price;
+  usd: Price;
   sub: string;
   /* Extra descriptive lines (used by the pay-as-you-go plan). */
   lines?: string[];
-  /* Amber "extra usage" callout box. */
-  callout?: { highlight: string; sub: string };
+  /* Amber "extra usage" callout box; highlight text differs per currency. */
+  callout?: { idr: string; usd: string; sub: string };
   features: string[];
+  /* Optional trailing feature line that embeds the currency (appended last). */
+  overage?: { idr: string; usd: string };
   featured?: boolean;
 };
 
@@ -252,9 +262,8 @@ export const pricingTiers: PricingTier[] = [
   {
     name: "Pay As You Go",
     tagline: "For occasional users with no commitment",
-    currency: "Rp",
-    amount: "268.200",
-    unit: "/hectare",
+    idr: { amount: "268.200", unit: "/hectare" },
+    usd: { amount: "14.9", unit: "/hectare" },
     sub: "No monthly fee. No quota.",
     lines: ["Pay only when you run an analysis", "Billed per hectare analyzed"],
     features: [
@@ -267,12 +276,12 @@ export const pricingTiers: PricingTier[] = [
   {
     name: "Regular",
     tagline: "For occasional users with no commitment",
-    currency: "Rp",
-    amount: "882.200",
-    unit: "/bulan",
+    idr: { amount: "882.200", unit: "/bulan" },
+    usd: { amount: "49", unit: "/month" },
     sub: "Includes 100 ha quota per month",
     callout: {
-      highlight: "Extra Usage: Rp9.000/ha if you run out of quota per month",
+      idr: "Extra Usage: Rp9.000/ha if you run out of quota per month",
+      usd: "Extra Usage: $0.50/ha if you run out of quota per month",
       sub: "Unused quota does not roll over",
     },
     features: [
@@ -286,12 +295,12 @@ export const pricingTiers: PricingTier[] = [
   {
     name: "Professional",
     tagline: "For organizations needing deep supply chain intelligence",
-    currency: "Rp",
-    amount: "2.321.300",
-    unit: "/bulan",
+    idr: { amount: "2.321.300", unit: "/bulan" },
+    usd: { amount: "129", unit: "/month" },
     sub: "Includes 500 ha quota per month",
     callout: {
-      highlight: "Extra Usage: Rp4.500/ha if you run out of quota per month",
+      idr: "Extra Usage: Rp4.500/ha if you run out of quota per month",
+      usd: "Extra Usage: $0.25/ha if you run out of quota per month",
       sub: "Unused quota does not roll over",
     },
     features: [
@@ -299,8 +308,11 @@ export const pricingTiers: PricingTier[] = [
       "Buy & export raw data",
       "Supply chain sustainability insight",
       "Insight per business & per country",
-      "Lower overage rate (Rp4.500/ha)",
     ],
+    overage: {
+      idr: "Lower overage rate (Rp4.500/ha)",
+      usd: "Lower overage rate ($0.25/ha)",
+    },
   },
 ];
 
