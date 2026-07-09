@@ -324,4 +324,9 @@ export const company = {
     "Kec. Kebayoran Baru Kota Jakarta Selatan, 12190",
   ],
   email: "contact@averos.land",
+  socials: {
+    instagram: "https://www.instagram.com/averos.land",
+    linkedin:
+      "https://www.linkedin.com/company/averos-spatial-data-verification-system/",
+  },
 };

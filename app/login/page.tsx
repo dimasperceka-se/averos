@@ -9,13 +9,12 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
-  Facebook,
   Globe,
+  Instagram,
   Leaf,
   Linkedin,
-  Twitter,
 } from "lucide-react";
-import { legalLinks } from "@/lib/data";
+import { company, legalLinks } from "@/lib/data";
 import GoogleButton from "@/components/GoogleButton";
 
 export default function LoginPage() {
@@ -214,14 +213,23 @@ function LoginInner() {
             className="h-6 w-auto"
           />
           <span className="flex items-center gap-2 text-slate-400">
-            <a href="#" aria-label="Facebook" className="hover:text-slate-600">
-              <Facebook className="h-4 w-4" />
-            </a>
-            <a href="#" aria-label="X (Twitter)" className="hover:text-slate-600">
-              <Twitter className="h-4 w-4" />
-            </a>
-            <a href="#" aria-label="LinkedIn" className="hover:text-slate-600">
+            <a
+              href={company.socials.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Averos on LinkedIn"
+              className="hover:text-slate-600"
+            >
               <Linkedin className="h-4 w-4" />
+            </a>
+            <a
+              href={company.socials.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Averos on Instagram"
+              className="hover:text-slate-600"
+            >
+              <Instagram className="h-4 w-4" />
             </a>
           </span>
         </div>

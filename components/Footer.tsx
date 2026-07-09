@@ -37,15 +37,19 @@ export default function Footer() {
 
             <div className="mt-4 flex items-center gap-3">
               <a
-                href="#"
-                aria-label="LinkedIn"
+                href={company.socials.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Averos on LinkedIn"
                 className="flex h-8 w-8 items-center justify-center rounded-md bg-white/10 text-slate-300 transition-colors hover:bg-white/20 hover:text-white"
               >
                 <Linkedin className="h-4 w-4" aria-hidden="true" />
               </a>
               <a
-                href="#"
-                aria-label="Instagram"
+                href={company.socials.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Averos on Instagram"
                 className="flex h-8 w-8 items-center justify-center rounded-md bg-white/10 text-slate-300 transition-colors hover:bg-white/20 hover:text-white"
               >
                 <Instagram className="h-4 w-4" aria-hidden="true" />
