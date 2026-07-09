@@ -11,6 +11,7 @@ import { runEudr, validateGeometry } from "@/lib/analysisClient";
 import { persistPlots } from "@/lib/plotsClient";
 import { downloadPlotsExcel } from "@/lib/excel";
 import DashboardNavbar from "@/components/DashboardNavbar";
+import AppTabs from "@/components/AppTabs";
 import AddPlotModal from "@/components/AddPlotModal";
 import AnalyzingOverlay from "@/components/AnalyzingOverlay";
 
@@ -77,6 +78,7 @@ export default function DashboardPage() {
   return (
     <>
       <DashboardNavbar />
+      <AppTabs />
 
       <main className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
