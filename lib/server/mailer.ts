@@ -65,7 +65,8 @@ export type ContactMessage = {
 
 /** Deliver a contact-form submission to the Averos inbox. */
 export async function sendContactEmail(data: ContactMessage): Promise<void> {
-  const to = process.env.CONTACT_TO || "contact@averos.land";
+  // Comma-separated recipients; overridable via CONTACT_TO.
+  const to = process.env.CONTACT_TO || "info@sustainit.id, dimas.perceka@sustainit.id";
   const name = `${data.firstName} ${data.lastName}`.trim();
   await getTransport().sendMail({
     from: FROM(),
