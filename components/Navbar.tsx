@@ -67,6 +67,14 @@ export default function Navbar({
               AgriPlot Map
             </Link>
           </li>
+          <li>
+            <Link
+              href="/contact"
+              className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
+            >
+              Contact Us
+            </Link>
+          </li>
         </ul>
 
         <div className="flex items-center gap-2">
@@ -139,6 +147,15 @@ export default function Navbar({
                 className="block rounded-lg px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50"
               >
                 AgriPlot Map
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/contact"
+                onClick={() => setOpen(false)}
+                className="block rounded-lg px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Contact Us
               </Link>
             </li>
             {authed && (

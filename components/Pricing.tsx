@@ -152,7 +152,7 @@ export default function Pricing() {
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </a>
             <a
-              href="mailto:contact@averos.land"
+              href="/contact"
               className="rounded-lg border border-navy/40 px-6 py-2.5 text-sm font-semibold text-navy transition-colors hover:bg-white/40"
             >
               Contact Our Team

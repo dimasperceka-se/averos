@@ -62,6 +62,14 @@ export default function DashboardNavbar() {
               AgriPlot Map
             </Link>
           </li>
+          <li>
+            <Link
+              href="/contact"
+              className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
+            >
+              Contact Us
+            </Link>
+          </li>
         </ul>
 
         <div className="flex items-center gap-3">
