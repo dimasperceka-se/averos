@@ -59,7 +59,7 @@ export default function DashboardNavbar() {
               href="/agriplot"
               className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
             >
-              AgriPlot Map
+              AgriPlot Subscription
             </Link>
           </li>
           <li>
@@ -68,6 +68,14 @@ export default function DashboardNavbar() {
               className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
             >
               Contact Us
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/about"
+              className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
+            >
+              About Us
             </Link>
           </li>
         </ul>

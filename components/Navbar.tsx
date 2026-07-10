@@ -65,7 +65,7 @@ export default function Navbar({
                 href="/agriplot"
                 className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
               >
-                AgriPlot Map
+                AgriPlot Subscription
               </Link>
             </li>
           )}
@@ -75,6 +75,14 @@ export default function Navbar({
               className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
             >
               Contact Us
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/about"
+              className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
+            >
+              About Us
             </Link>
           </li>
         </ul>
@@ -149,7 +157,7 @@ export default function Navbar({
                   onClick={() => setOpen(false)}
                   className="block rounded-lg px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50"
                 >
-                  AgriPlot Map
+                  AgriPlot Subscription
                 </Link>
               </li>
             )}
@@ -160,6 +168,15 @@ export default function Navbar({
                 className="block rounded-lg px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50"
               >
                 Contact Us
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/about"
+                onClick={() => setOpen(false)}
+                className="block rounded-lg px-3 py-2 text-base font-medium text-slate-700 hover:bg-slate-50"
+              >
+                About Us
               </Link>
             </li>
             {authed && (
