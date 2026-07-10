@@ -105,6 +105,18 @@ patch(ROUTES, [
 patch(AGRI, [
 ('import AdminBoundaryLayer from "./layers/AdminBoundaryLayer";\n', ''),
 (
+'''            if (!cropType.trim()) {
+                toast({
+                    title: "Invalid crop type",
+                    description: "Crop type must be selected",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+''', ''
+),
+(
 '''                    {adminGeojson && showAdminBoundary && (
                         <AdminBoundaryLayer data={adminGeojson} />
                     )}
