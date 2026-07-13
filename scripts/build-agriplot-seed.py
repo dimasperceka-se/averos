@@ -45,9 +45,6 @@ DEFOREST = {
     "ende":               {0},
 }
 
-CROP_MAP = {"coffee": "coffee", "cocoa": "cocoa", "oil palm": "oil_palm",
-            "oil_palm": "oil_palm", "palm": "oil_palm", "rubber": "rubber"}
-CROP_ROT = ["oil_palm", "cocoa", "coffee", "rubber"]
 STATUS_MAP = {"new": "in_progress", "verified": "certified", "certified": "certified",
               "clean": "clean"}
 STATUS_ROT = ["clean", "certified", "in_progress"]
@@ -196,8 +193,7 @@ def main():
                 area = area_geo
             area = round(max(area, 0.01), 2)
 
-            crop_raw = str(p.get("COMMODITY") or "").strip().lower()
-            crop = CROP_MAP.get(crop_raw, CROP_ROT[i % len(CROP_ROT)])
+            crop = "coffee"  # dummy dataset is all coffee
             status_raw = str(p.get("STATUS") or "").strip().lower()
             land_status = STATUS_MAP.get(status_raw, STATUS_ROT[i % len(STATUS_ROT)])
             owner = p.get("NAME2") or p.get("owner") or f"{dist} Farmer {i+1:02d}"
