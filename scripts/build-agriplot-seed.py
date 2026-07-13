@@ -53,13 +53,30 @@ STATUS_MAP = {"new": "in_progress", "verified": "certified", "certified": "certi
 STATUS_ROT = ["clean", "certified", "in_progress"]
 
 
-def strip2d(geom):
-    """Return a copy of the geometry with coordinates truncated to [x, y]."""
-    def clean(node):
-        if isinstance(node, list) and node and isinstance(node[0], (int, float)):
-            return [node[0], node[1]]
-        return [clean(n) for n in node]
-    return {"type": geom["type"], "coordinates": clean(geom["coordinates"])}
+def _ring_area(r):
+    a = 0.0
+    for i in range(len(r) - 1):
+        a += r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1]
+    return abs(a)
+
+
+def to_polygon_2d(geom):
+    """Normalise to a 2D GeoJSON Polygon.
+
+    The sit_plots.polygon column is typed geometry(Polygon), so MultiPolygons
+    are rejected. Every source part here is single-part; if a MultiPolygon ever
+    has multiple parts we keep the largest by outer-ring area.
+    """
+    t = geom["type"]
+    if t == "Polygon":
+        rings = geom["coordinates"]
+    elif t == "MultiPolygon":
+        parts = geom["coordinates"]
+        rings = parts[0] if len(parts) == 1 else max(parts, key=lambda p: _ring_area(p[0]))
+    else:
+        raise ValueError(f"unsupported geometry type: {t}")
+    clean = [[[c[0], c[1]] for c in ring] for ring in rings]
+    return {"type": "Polygon", "coordinates": clean}
 
 
 def outer_rings(geom):
@@ -167,7 +184,7 @@ def main():
 
         for i, f in enumerate(feats):
             p = f.get("properties", {}) or {}
-            geom = f["geometry"]
+            geom = to_polygon_2d(f["geometry"])
             (clon, clat), area_geo = centroid_and_area_ha(geom)
             # real area if present & positive, else computed from geometry
             area = p.get("POLYGON_HA") or p.get("SURVEY_HA") or 0
@@ -190,7 +207,7 @@ def main():
             defor_total += is_defor
             total += 1
 
-            gj = json.dumps(strip2d(geom), separators=(",", ":"))
+            gj = json.dumps(geom, separators=(",", ":"))
             w(
                 "INSERT INTO sit_plots (plot_id, respondent_status, area_hectares, polygon, latlong, "
                 "land_status, crop_type, planting_year, gis_id, activity_id, "
