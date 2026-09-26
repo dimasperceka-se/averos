@@ -42,14 +42,16 @@ const save = () => writeFile(file, JSON.stringify(setup, null, 2), { mode: 0o600
 await save();
 const output = {};
 
-if (!setup.productId) {
+const planIds = { regular: process.env.PAYPAL_PLAN_REGULAR_ID || setup.regularId, pro: process.env.PAYPAL_PLAN_PRO_ID || setup.proId };
+// The product is only needed to create plans; don't leave an orphan one when both plans exist.
+if (!setup.productId && (!planIds.regular || !planIds.pro)) {
   const product = await api("/v1/catalogs/products", { name: "Averos land analysis", description: "Monthly land compliance analysis", type: "SERVICE", category: "SOFTWARE" }, setup.productRequest);
   setup.productId = product.id; await save();
 }
 // Prices must match PRICES in lib/server/billing.ts.
 for (const [key, name, price] of [["regular", "Averos Regular — 100 ha/month", "49.00"], ["pro", "Averos Professional — 500 ha/month", "129.00"]]) {
   const envKey = key === "regular" ? "PAYPAL_PLAN_REGULAR_ID" : "PAYPAL_PLAN_PRO_ID";
-  let id = process.env[envKey] || setup[key + "Id"];
+  let id = planIds[key];
   if (!id) {
     const plan = await api("/v1/billing/plans", {
       product_id: setup.productId, name, status: "ACTIVE",
