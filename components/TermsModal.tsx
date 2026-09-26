@@ -2,12 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowRight, X } from "lucide-react";
-
-const PARAGRAPHS = [
-  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc magna mi, rhoncus et dolor vel, lobortis pulvinar libero. Fusce ullamcorper quis quam id varius. Phasellus sodales ex vitae est pharetra gravida. Maecenas cursus interdum est, eget vulputate arcu rutrum id. In egestas et purus eu rhoncus. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Quisque fringilla turpis tellus, vel ultricies erat convallis quis. Duis malesuada faucibus aliquam. In ut viverra nunc. Integer eget fermentum magna. In blandit lacus non urna fringilla, sed facilisis magna placerat. Nullam vulputate est a lorem placerat, eu viverra nisl dapibus. Nullam quis euismod justo. Praesent id leo at ipsum hendrerit hendrerit eget vitae purus. Suspendisse potenti.",
-  "Curabitur sollicitudin orci enim, et vehicula felis maximus non. Nullam finibus vulputate malesuada. In faucibus tortor non velit tristique, in aliquet ligula feugiat. Suspendisse ut arcu at felis blandit interdum non eu ipsum. Proin ullamcorper quis erat ut lobortis. In ligula purus. Vestibulum eget nibh quis magna hendrerit elementum ut ut quam.",
-  "Pellentesque sed enim orci. Vestibulum hendrerit pulvinar turpis ultrices pharetra. Interdum et malesuada fames ac ante ipsum primis in faucibus. Quisque maximus turpis leo, et vulputate purus aliquet at. Phasellus cursus volutpat neque, ac pellentesque leo pretium vitae. Donec accumsan dolor eu varius posuere. Duis interdum justo nec venenatis lobortis. Curabitur condimentum faucibus odio, vitae consectetur massa.",
-];
+import { policyIntro, policySections, policyUpdated } from "@/lib/data";
 
 export default function TermsModal({
   open,
@@ -56,9 +51,19 @@ export default function TermsModal({
 
         <div className="overflow-y-auto px-6 py-5">
           <div className="space-y-4 rounded-xl border border-slate-200 p-5 text-sm leading-relaxed text-slate-600">
-            {PARAGRAPHS.map((p, i) => (
-              <p key={i}>{p}</p>
+            <p>{policyIntro}</p>
+            {policySections.map((s) => (
+              <section key={s.heading}>
+                <h3 className="font-semibold text-slate-800">{s.heading}</h3>
+                <p className="mt-1">{s.body}</p>
+              </section>
             ))}
+            <p className="text-xs text-slate-500">
+              Last updated: {policyUpdated} ·{" "}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-semibold text-navy underline">
+                Open as a page
+              </a>
+            </p>
           </div>
         </div>
 
