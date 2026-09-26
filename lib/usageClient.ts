@@ -1,3 +1,4 @@
+import type { Plot } from "./geo";
 export type Usage = {
   freeUsedHa: number;
   paid: boolean;
@@ -11,14 +12,13 @@ export type Decision = "paid" | "survey" | "report" | "payment";
 
 /** Server-authoritative routing decision. Returns null on error (caller fails closed). */
 export async function authorize(
-  totalArea: number,
-  count: number,
+  plots: Plot[],
 ): Promise<{ decision: Decision } & Usage | null> {
   try {
     const res = await fetch("/api/usage", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "authorize", totalArea, count }),
+      body: JSON.stringify({ action: "authorize", plots: plots.map(p => ({ ring: p.ring })) }),
     });
     if (!res.ok) return null;
     return (await res.json()) as { decision: Decision } & Usage;
@@ -43,19 +43,6 @@ export async function consumeQuota(area: number): Promise<Usage> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "consume", area }),
-    });
-    return (await res.json()) as Usage;
-  } catch {
-    return FALLBACK;
-  }
-}
-
-export async function markPaid(): Promise<Usage> {
-  try {
-    const res = await fetch("/api/usage", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "pay" }),
     });
     return (await res.json()) as Usage;
   } catch {

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/server/session";
 
+import { authorizePlots } from "@/lib/server/billing";
+import { plotsFromGeoJSON } from "@/lib/server/billingGeometry";
+import { findById } from "@/lib/server/userStore";
+import { sameOrigin } from "@/lib/server/http";
+
 export const runtime = "nodejs";
 export const maxDuration = 120; // upstream can take ~10s/call (Vercel hint)
 
@@ -19,6 +24,7 @@ export async function POST(
   req: Request,
   ctx: { params: Promise<{ type: string }> },
 ) {
+  if (!sameOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -37,6 +43,18 @@ export async function POST(
   }
   if (!body.geojson) {
     return NextResponse.json({ error: "Missing geojson" }, { status: 400 });
+  }
+
+  if (type !== "validate-geometry") {
+    try {
+      const plots = plotsFromGeoJSON(body.geojson);
+      const user = await findById(session.uid);
+      if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const decision = await authorizePlots(session.uid, plots, true, user.freeUsedHa || 0);
+      if (decision === "payment") return NextResponse.json({ error: "Payment or additional quota required." }, { status: 402 });
+    } catch {
+      return NextResponse.json({ error: "Unable to authorize these plots." }, { status: 400 });
+    }
   }
 
   // The FastAPI endpoints expect a GeoJSON file via multipart/form-data (field "file").

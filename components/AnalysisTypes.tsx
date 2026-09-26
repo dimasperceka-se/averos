@@ -70,10 +70,9 @@ export default function AnalysisTypes({ authed = false }: { authed?: boolean }) 
         return;
       }
 
-      const total = validPlots.reduce((s, p) => s + p.areaHa, 0);
 
       // Server decides routing (the 4 ha quota gate is enforced server-side).
-      const auth = await authorize(total, validPlots.length);
+      const auth = await authorize(validPlots);
       outcomeRef.current = auth
         ? auth.decision === "paid"
           ? "dashboard"

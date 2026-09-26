@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/server/session";
-import { findById } from "@/lib/server/userStore";
+import { billingSummary } from "@/lib/server/billing";
 
 /** Server gate: the dashboard (and EUDR detail) is a paid-only feature. */
 export default async function DashboardLayout({
@@ -10,7 +10,7 @@ export default async function DashboardLayout({
 }) {
   const session = await getSession();
   if (!session) redirect("/login?next=/dashboard");
-  const user = await findById(session.uid);
-  if (!user?.paid) redirect("/checkout");
+  const billing = await billingSummary(session.uid);
+  if (!billing.paid) redirect("/checkout");
   return <>{children}</>;
 }
