@@ -3,6 +3,7 @@ import { mkdir, writeFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { processBillingEvent } from "./billing";
 import { paypal } from "./paypal";
+import { dataDir } from "./dataDir";
 
 const MAX_BYTES = 1024 * 1024;
 
@@ -49,7 +50,7 @@ export async function receivePayPalWebhook(req: Request): Promise<Response> {
     await processBillingEvent(event);
     // Keep a durable copy after applying billing state. Retries are idempotent.
     // A stable event filename prevents duplicate deliveries from adding duplicate records.
-    const directory = path.join(process.cwd(), ".data", "paypal-webhooks", PAYPAL_ENV!);
+    const directory = dataDir("paypal-webhooks", PAYPAL_ENV!);
     await mkdir(directory, { recursive: true, mode: 0o700 });
     const filename = createHash("sha256").update(event.id).digest("hex");
     const temporary = path.join(directory, `${filename}.${randomUUID()}.tmp`);

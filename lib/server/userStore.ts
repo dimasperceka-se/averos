@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { randomBytes, randomUUID } from "crypto";
+import { dataDir } from "./dataDir";
 
 export type User = {
   id: string;
@@ -18,7 +19,7 @@ export type User = {
   resetRequestedAt?: number | null;
 };
 
-const DATA_DIR = path.join(process.cwd(), ".data");
+const DATA_DIR = dataDir();
 const FILE = path.join(DATA_DIR, "users.json");
 
 async function readAll(): Promise<User[]> {

@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { BillingError, paypalEnvironment } from "./paypal";
+import { dataDir } from "./dataDir";
 
 export type Plan = "payg" | "regular" | "pro";
 export type BilledPlot = { key: string; areaHa: number };
@@ -21,7 +22,7 @@ export type BillingState = {
 // updates between callbacks, webhook deliveries and concurrent analysis requests.
 // Fail closed on corruption; never replace an unreadable ledger with an empty one.
 export async function billingTransaction<T>(fn: (state: BillingState) => Promise<T> | T): Promise<T> {
-  const dir = path.join(process.cwd(), ".data", "billing", paypalEnvironment());
+  const dir = dataDir("billing", paypalEnvironment());
   await mkdir(dir, { recursive: true, mode: 0o700 });
   const lock = path.join(dir, "lock");
   const deadline = Date.now() + 45000;
