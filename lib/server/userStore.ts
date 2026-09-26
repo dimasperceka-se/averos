@@ -12,6 +12,10 @@ export type User = {
   createdAt: number;
   freeUsedHa: number; // cumulative hectares analyzed on the free tier
   paid: boolean; // unlocks dashboard + Excel export
+  // Password reset: only a SHA-256 of the emailed token is stored.
+  resetTokenHash?: string | null;
+  resetExpires?: number | null;
+  resetRequestedAt?: number | null;
 };
 
 const DATA_DIR = path.join(process.cwd(), ".data");
@@ -47,6 +51,11 @@ export async function findById(id: string): Promise<User | null> {
 export async function findByToken(token: string): Promise<User | null> {
   const all = await readAll();
   return all.find((u) => u.verifyToken === token) ?? null;
+}
+
+export async function findByResetTokenHash(hash: string): Promise<User | null> {
+  const all = await readAll();
+  return all.find((u) => u.resetTokenHash === hash && (u.resetExpires ?? 0) > Date.now()) ?? null;
 }
 
 export async function createUser(input: {

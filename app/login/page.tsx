@@ -104,6 +104,12 @@ function LoginInner() {
                   Email verified — you can sign in now.
                 </div>
               )}
+              {params.get("reset") === "1" && (
+                <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  Password updated — log in with your new password.
+                </div>
+              )}
               {verified === "0" && (
                 <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
                   That verification link is invalid or expired.
@@ -170,7 +176,7 @@ function LoginInner() {
                   Sign up
                 </Link>
                 <span className="mx-2 text-slate-300">|</span>
-                <Link href="#" className="font-semibold text-navy hover:underline">
+                <Link href="/forgot-password" className="font-semibold text-navy hover:underline">
                   Forgot password
                 </Link>
               </p>

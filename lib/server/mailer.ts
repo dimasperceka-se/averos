@@ -55,6 +55,47 @@ If you didn't create an account, you can safely ignore this email.`,
   });
 }
 
+export async function sendPasswordResetEmail(
+  to: string,
+  name: string,
+  link: string,
+): Promise<void> {
+  await getTransport().sendMail({
+    from: FROM(),
+    to,
+    subject: "Reset your Averos password",
+    text: `Hi ${name},
+
+We received a request to reset your Averos password. Open this link to choose a new one (it expires in 1 hour):
+
+${link}
+
+If you didn't ask for this, you can ignore this email — your password stays the same.`,
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:480px;margin:0 auto;color:#1b3a6b">
+        <h1 style="color:#1b3a6b;font-size:22px">Reset your password</h1>
+        <p style="color:#475569;line-height:1.6">
+          Hi ${escapeHtml(name)}, we received a request to reset your Averos password.
+          This link expires in 1 hour.
+        </p>
+        <p style="margin:28px 0">
+          <a href="${link}"
+             style="background:#1b3a6b;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;display:inline-block">
+            Choose a new password
+          </a>
+        </p>
+        <p style="color:#94a3b8;font-size:13px;line-height:1.6">
+          Or paste this link into your browser:<br>
+          <span style="color:#34d685">${link}</span>
+        </p>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:28px 0">
+        <p style="color:#94a3b8;font-size:12px">
+          If you didn't ask for this, you can ignore this email — your password stays the same.
+        </p>
+      </div>`,
+  });
+}
+
 export type ContactMessage = {
   firstName: string;
   lastName: string;
