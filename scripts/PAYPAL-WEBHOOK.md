@@ -15,8 +15,10 @@ state current afterwards (renewals, refunds, cancellations made in PayPal).
 Set `PAYPAL_ENV` (`sandbox` or `live`), `PAYPAL_CLIENT_ID`,
 `PAYPAL_CLIENT_SECRET`, and, after dashboard registration, `PAYPAL_WEBHOOK_ID`.
 All values must belong to the same PayPal environment and app. In Sandbox,
-`node --env-file=.env scripts/setup-paypal-sandbox.mjs` creates the product and
-the two plans and writes `PAYPAL_PLAN_REGULAR_ID` / `PAYPAL_PLAN_PRO_ID`.
+`node --env-file=.env scripts/setup-paypal.mjs` creates the product and the two
+plans and writes `PAYPAL_PLAN_REGULAR_ID` / `PAYPAL_PLAN_PRO_ID` to `.env`; add
+`--webhook-url=https://<tunnel-host>/api/paypal/webhook` to also register the
+webhook and write `PAYPAL_WEBHOOK_ID`. Re-running reuses what already exists.
 
 Subscribe the webhook to: `BILLING.SUBSCRIPTION.ACTIVATED`, `.CANCELLED`,
 `.EXPIRED`, `.PAYMENT.FAILED`, `.SUSPENDED`, `.UPDATED`;
@@ -51,3 +53,53 @@ PayPal dashboard (the Webhook ID stays the same). Use a stable deployed HTTPS
 URL for production, with live credentials, live plans and a live webhook ID.
 PayPal's mock webhook simulator cannot be verified with the postback verification
 API used here; use real sandbox transactions for end-to-end verification.
+
+## Going live
+
+1. In the PayPal Developer Dashboard, switch to **Live** and create a REST app
+   under the Averos PayPal **Business** account. Keep its client ID and secret
+   out of git and chat.
+2. Provision the live plans and webhook. On the production server, or locally
+   with a `.env.paypal-live` file (ignored by git, not loaded by Next.js)
+   containing `PAYPAL_ENV=live`, `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET`:
+
+   ```sh
+   node --env-file=.env.paypal-live scripts/setup-paypal.mjs --live \
+     --webhook-url=https://averos.land/api/paypal/webhook
+   ```
+
+   It prints `PAYPAL_PLAN_REGULAR_ID`, `PAYPAL_PLAN_PRO_ID` and
+   `PAYPAL_WEBHOOK_ID`. Its state is kept in `.data/paypal-live-setup.json`, so
+   re-running never creates duplicate plans.
+3. Set the production environment **before** deploying this code. Billing reads
+   `PAYPAL_ENV` on every dashboard, usage and analysis request, and those fail
+   while it is missing:
+
+   ```sh
+   PAYPAL_ENV=live
+   PAYPAL_CLIENT_ID=...
+   PAYPAL_CLIENT_SECRET=...
+   PAYPAL_CURRENCY=USD
+   PAYPAL_PLAN_REGULAR_ID=...
+   PAYPAL_PLAN_PRO_ID=...
+   PAYPAL_WEBHOOK_ID=...
+   APP_URL=https://averos.land
+   ```
+
+   Leave `PAYPAL_RETURN_BASE` unset (it falls back to `APP_URL`); live return
+   URLs must be HTTPS.
+4. Deploy (`npm ci && npm run build`, then restart). Check that
+   `curl https://averos.land/api/paypal/webhook` returns `reachable` from
+   outside. A CDN or firewall in front must let PayPal POST to this path.
+5. Run one real low-value payment and refund it from the PayPal Business
+   account. Then subscribe with a real account and cancel. Include an
+   Indonesian buyer: in Sandbox, subscription approval failed for an
+   Indonesian personal account but worked for a US one.
+
+Operational notes:
+
+- The ledger (`.data/billing/live/ledger.json`) is the record of who paid. Run a
+  single app instance on a persistent disk, not serverless or several replicas,
+  and back up `.data/billing/` and `.data/paypal-webhooks/` with `.data/users.json`.
+- Access now comes only from verified PayPal purchases. Users marked `paid` by
+  the old prototype button lose dashboard access until they pay.
