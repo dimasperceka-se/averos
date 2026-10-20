@@ -8,7 +8,7 @@ import type { Plot } from "@/lib/geo";
 const NA = { text: "Not analyzed", cls: "italic text-slate-400" };
 
 function deforestationLabel(plot: Plot) {
-  if (!plot.isValid) return NA;
+  if (!plot.isValid || !plot.eudr) return NA;
   const d = plot.eudr?.deforestation;
   if (!d) return { text: "—", cls: "text-slate-400" };
   const high = d.riskLevel.toLowerCase() === "high";
@@ -18,7 +18,7 @@ function deforestationLabel(plot: Plot) {
 }
 
 function legalityLabel(plot: Plot) {
-  if (!plot.isValid) return NA;
+  if (!plot.isValid || !plot.eudr) return NA;
   const status = plot.eudr?.protectedArea?.status;
   if (!status) return { text: "—", cls: "text-slate-400" };
   if (status === "non_compliant") return { text: "Non-Compliant", cls: "text-red-500 font-medium" };
@@ -27,10 +27,10 @@ function legalityLabel(plot: Plot) {
 }
 
 function riskBadge(plot: Plot) {
-  if (!plot.isValid) {
+  if (!plot.isValid || !plot.eudr) {
     return (
       <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">
-        Invalid geometry
+        {plot.isValid ? "Not analyzed" : "Invalid geometry"}
       </span>
     );
   }

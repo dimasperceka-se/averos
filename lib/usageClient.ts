@@ -1,4 +1,5 @@
 import type { Plot } from "./geo";
+import { FREE_QUOTA_HA } from "./quota";
 export type Usage = {
   freeUsedHa: number;
   paid: boolean;
@@ -6,7 +7,7 @@ export type Usage = {
   remainingHa: number;
 };
 
-const FALLBACK: Usage = { freeUsedHa: 0, paid: false, quotaHa: 2, remainingHa: 2 };
+const FALLBACK: Usage = { freeUsedHa: 0, paid: false, quotaHa: FREE_QUOTA_HA, remainingHa: FREE_QUOTA_HA };
 
 export type Decision = "paid" | "survey" | "report" | "payment";
 

@@ -1,6 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { billedPlots } from "./billingGeometry";
 import { billingTransaction, type BillingState, type Purchase, type Plan, type BilledPlot } from "./billingStore";
 import { BillingError, paypal, paypalEnvironment } from "./paypal";
+import { PROMO_STATUS, promoActive, promoEndsAt, promoPeriod } from "./promo";
+import { FREE_QUOTA_HA } from "../quota";
 
 export const PRICES = { payg: 14.9, regular: 49, pro: 129 };
 export const QUOTAS = { regular: 100, pro: 500 };
@@ -26,17 +29,52 @@ export function quote(plan: unknown, input: unknown) {
 
 export function purchaseActive(p: Purchase, now = Date.now()): boolean {
   if (p.revoked) return false;
+  if (p.status === PROMO_STATUS) return promoActive(now);
   if (p.plan === "payg") return p.status === "COMPLETED";
   return ["ACTIVE", "CANCELLED", "EXPIRED"].includes(p.status) && !!p.expiresAt && p.expiresAt > now;
+}
+
+/** Free-programme quotas start over each month; reset a stale period in place. */
+function freshPromoPeriod(p: Purchase) {
+  if (p.status === PROMO_STATUS && p.periodId !== promoPeriod()) { p.periodId = promoPeriod(); p.used = {}; }
 }
 
 export async function billingSummary(uid: string) {
   return billingTransaction(state => {
     const own = Object.values(state.purchases).filter(p => p.uid === uid);
+    own.forEach(freshPromoPeriod);
+    const isPromo = (p: Purchase) => p.status === PROMO_STATUS;
     return {
       paid: own.some(p => purchaseActive(p)), environment: paypalEnvironment(),
-      subscriptions: own.filter(p => p.plan !== "payg" && p.providerId).map(p => ({ id: p.id, plan: p.plan, status: p.status, active: purchaseActive(p), expiresAt: p.expiresAt, remainingHa: Math.max(0, QUOTAS[p.plan as "regular" | "pro"] - Object.values(p.used).reduce((s, n) => s + n, 0)) })),
+      promo: { active: promoActive(), endsAt: promoEndsAt() },
+      subscriptions: own.filter(p => p.plan !== "payg" && (p.providerId || (isPromo(p) && !p.revoked))).map(p => ({ id: p.id, plan: p.plan, status: p.status, active: purchaseActive(p), expiresAt: isPromo(p) ? promoEndsAt() : p.expiresAt, remainingHa: Math.max(0, QUOTAS[p.plan as "regular" | "pro"] - Object.values(p.used).reduce((s, n) => s + n, 0)) })),
     };
+  });
+}
+
+/**
+ * Activate the chosen plan at no cost while the Hasbi Foundation programme
+ * runs. PAYG covers exactly the selected plots, as a paid order would; a free
+ * Regular/Professional plan keeps its monthly quota. Switching between those
+ * two changes the plan but keeps this month's usage.
+ */
+export async function activatePromo(uid: string, input: { plan?: unknown; plots?: unknown }) {
+  if (!promoActive()) throw new BillingError("The free programme has ended.", 410);
+  const q = quote(input.plan, input.plots);
+  return billingTransaction(state => {
+    const base = { uid, amount: "0.00", currency: q.currency, createdAt: Date.now(), status: PROMO_STATUS };
+    if (q.plan === "payg") {
+      const id = randomUUID();
+      state.purchases[id] = { ...base, id, plan: "payg", plots: q.plots, used: {} };
+    } else {
+      const current = Object.values(state.purchases).find(p => p.uid === uid && p.status === PROMO_STATUS && !p.revoked && p.plan !== "payg");
+      if (current) current.plan = q.plan;
+      else {
+        const id = randomUUID();
+        state.purchases[id] = { ...base, id, plan: q.plan, plots: [], periodId: promoPeriod(), used: {} };
+      }
+    }
+    return { paid: true, plan: q.plan };
   });
 }
 
@@ -62,7 +100,8 @@ export async function createCheckout(uid: string, input: { plan?: unknown; plots
     }
     // A CREATING record that never reached PayPal (failed call, abandoned retry) should not block a new plan.
     const abandoned = (p: Purchase) => p.status === "CREATING" && !p.providerId && Date.now() - p.createdAt > 120000;
-    if (q.plan !== "payg" && Object.values(state.purchases).some(p => p.uid === uid && p.plan !== "payg" && !["CANCELLED", "EXPIRED"].includes(p.status) && !abandoned(p))) throw new BillingError("You already have a subscription or pending checkout. Resume or cancel it first.", 409);
+    // A free-programme plan never blocks a real PayPal subscription.
+    if (q.plan !== "payg" && Object.values(state.purchases).some(p => p.uid === uid && p.plan !== "payg" && !["CANCELLED", "EXPIRED", PROMO_STATUS].includes(p.status) && !abandoned(p))) throw new BillingError("You already have a subscription or pending checkout. Resume or cancel it first.", 409);
     state.purchases[id] = { id, uid, plan: q.plan, amount: q.amount, currency: q.currency, plots: q.plots, createdAt: Date.now(), status: "CREATING", used: {} };
   });
   return billingTransaction(async state => {
@@ -191,6 +230,7 @@ function coverage(state: BillingState, uid: string, plots: BilledPlot[], commit:
   const uncovered = plots.filter(p => !paygKeys.has(p.key));
   if (!uncovered.length) return "paid";
   for (const subscription of own.filter(p => p.plan !== "payg")) {
+    freshPromoPeriod(subscription);
     const fresh = uncovered.filter(p => subscription.used[p.key] === undefined);
     const total = Object.values(subscription.used).reduce((s, n) => s + n, 0) + fresh.reduce((s, p) => s + p.areaHa, 0);
     if (total <= QUOTAS[subscription.plan as "regular" | "pro"] + 1e-8) {
@@ -201,11 +241,16 @@ function coverage(state: BillingState, uid: string, plots: BilledPlot[], commit:
   const free = state.free[uid] || {};
   const fresh = uncovered.filter(p => free[p.key] === undefined);
   const total = legacyFreeUsed + Object.values(free).reduce((s, n) => s + n, 0) + fresh.reduce((s, p) => s + p.areaHa, 0);
-  if (total <= 4 + 1e-8) {
+  if (total <= FREE_QUOTA_HA + 1e-8) {
     if (commit) { for (const p of fresh) free[p.key] = p.areaHa; state.free[uid] = free; }
     return "report";
   }
   return "payment";
+}
+
+/** Hectares used on the free tier (ledger entries, one per distinct plot). */
+export async function freeUsedHa(uid: string) {
+  return billingTransaction(state => Object.values(state.free[uid] || {}).reduce((s, n) => s + n, 0));
 }
 
 export async function authorizePlots(uid: string, plots: BilledPlot[], commit = false, legacyFreeUsed = 0) {

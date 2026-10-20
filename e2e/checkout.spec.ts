@@ -13,9 +13,11 @@ test.beforeEach(async ({ page }) => {
   await signedInAccount(page, "checkout");
 });
 
-test("unpaid users go from the dashboard to a Sandbox checkout", async ({ page }) => {
+test("free-tier users get the dashboard, and checkout runs on Sandbox", async ({ page }) => {
   await page.goto("/dashboard");
-  await expect(page).toHaveURL(/\/checkout/);
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByText("No plots yet")).toBeVisible();
+  await page.goto("/checkout");
   await expect(page.getByText("Sandbox testing")).toBeVisible();
 });
 

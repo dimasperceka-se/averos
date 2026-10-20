@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { CURRENCIES, pricingTiers, type CurrencyKey } from "@/lib/data";
+import { FREE_QUOTA_HA } from "@/lib/quota";
 
 const CURRENCY_KEYS: CurrencyKey[] = ["idr", "usd"];
 
@@ -137,11 +138,11 @@ export default function Pricing() {
         {/* Free-trial banner */}
         <div className="mt-8 rounded-3xl bg-gradient-to-r from-teal-300 to-emerald-400 px-6 py-14 text-center">
           <h3 className="text-3xl font-extrabold text-navy sm:text-4xl">
-            Analyze your first plot for free.
+            Analyze your first {FREE_QUOTA_HA} hectares for free.
           </h3>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-navy/80">
-            Upload 1 plot (up to 4 hectares) and complete the assessment to
-            receive your first land analysis at no cost.
+            Upload one plot or several — up to {FREE_QUOTA_HA} hectares in total — and
+            receive your land analysis at no cost.
           </p>
           <div className="mt-6 flex flex-col items-center gap-3">
             <a

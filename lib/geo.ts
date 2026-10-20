@@ -21,11 +21,12 @@ export type DeforestationResult = {
   sbtn: { ha: number; pct: number };
 };
 export type ProtectedAreaResult = { status: string; categories: string[] };
+/** Rainfall stats are null where the dataset has no coverage (CHIRPS: 50°S–50°N). */
 export type RainfallResult = {
-  meanMm: number;
-  minMm: number;
-  maxMm: number;
-  stdMm: number;
+  meanMm: number | null;
+  minMm: number | null;
+  maxMm: number | null;
+  stdMm: number | null;
   areaHa: number;
   period?: { start: string; end: string };
 };

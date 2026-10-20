@@ -1,18 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ArrowRight, ArrowUpRight, Download, Plus, Shapes } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Download, FileCheck2, Lock, Plus, Shapes } from "lucide-react";
 import { analysisByKey } from "@/lib/data";
 import { usePlotStore } from "@/lib/plotStore";
 import type { FeatureCollection, Plot } from "@/lib/geo";
 import { runEudr, validateGeometry } from "@/lib/analysisClient";
 import { persistPlots } from "@/lib/plotsClient";
 import { downloadPlotsExcel } from "@/lib/excel";
+import { authorize } from "@/lib/usageClient";
+import { FREE_QUOTA_HA } from "@/lib/quota";
 import DashboardNavbar from "@/components/DashboardNavbar";
 import AddPlotModal from "@/components/AddPlotModal";
 import AnalyzingOverlay from "@/components/AnalyzingOverlay";
+import { useConsentGate } from "@/components/ConsentGate";
+import DdsModal from "@/components/DdsModal";
+import Popup from "@/components/Popup";
 
 const PlotDisplayMap = dynamic(() => import("@/components/PlotDisplayMap"), {
   ssr: false,
@@ -38,6 +43,42 @@ export default function DashboardPage() {
   const [addDone, setAddDone] = useState(false);
   const [eudrRunning, setEudrRunning] = useState(false);
   const [eudrAnimDone, setEudrAnimDone] = useState(false);
+  const [ddsOpen, setDdsOpen] = useState(false);
+  // Over-quota selection: what's left on the free tier or the user's plan.
+  type QuotaBlock = { paid: boolean; remainingHa: number };
+  const [quotaBlock, setQuotaBlock] = useState<QuotaBlock | null>(null);
+  const [runError, setRunError] = useState("");
+  const quotaAfterRun = useRef<QuotaBlock | null>(null);
+  // Plots the user unchecked. Tracking exclusions (not selections) keeps every
+  // valid plot — including ones added later — checked by default.
+  const [excluded, setExcluded] = useState<Set<number>>(() => new Set());
+  const { ensureConsent, consentModal } = useConsentGate();
+  const openAddPlot = async () => {
+    if (await ensureConsent()) setModalOpen(true);
+  };
+
+  const { selectable, selected, selectedArea } = useMemo(() => {
+    const ok = plots.filter((p) => !isInvalid(p));
+    const sel = ok.filter((p) => !excluded.has(p.id));
+    return {
+      selectable: ok,
+      selected: sel,
+      selectedArea: sel.reduce((s, p) => s + p.areaHa, 0),
+    };
+  }, [plots, excluded]);
+  const allSelected = selectable.length > 0 && selected.length === selectable.length;
+  // The DDS covers the checked plots; it needs at least one analyzed plot.
+  const canExportDds = selected.some((p) => p.eudr);
+
+  const toggle = (id: number) =>
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAll = () =>
+    setExcluded(allSelected ? new Set(selectable.map((p) => p.id)) : new Set());
 
   const { totalArea, valid, invalid } = useMemo(() => {
     const inv = plots.filter(isInvalid).length;
@@ -62,12 +103,32 @@ export default function DashboardPage() {
   };
 
   const startEudr = async () => {
-    if (!plots.length) return;
+    if (!selected.length || !(await ensureConsent())) return;
+    setRunError("");
+    // Check the quota first, so an over-quota selection never starts a run.
+    const auth = await authorize(selected);
+    if (!auth) {
+      setRunError("We couldn't check your quota. Please try again.");
+      return;
+    }
+    const quota = { paid: auth.paid, remainingHa: auth.remainingHa };
+    if (auth.decision === "payment") {
+      setQuotaBlock(quota);
+      return;
+    }
+    quotaAfterRun.current = null;
     setEudrAnimDone(false);
     setEudrRunning(true);
     try {
-      const run = await runEudr(plots, analyses);
-      updatePlots(run.plots);
+      // Only the checked plots are analyzed; the others keep their results.
+      const run = await runEudr(selected, analyses);
+      if (run.paymentRequired) {
+        // Quota ran out between the check and the run — keep current results.
+        quotaAfterRun.current = quota;
+        return;
+      }
+      const byId = new Map(run.plots.map((p) => [p.id, p]));
+      updatePlots(plots.map((p) => byId.get(p.id) ?? p));
       setEudrDone(true);
     } finally {
       setEudrAnimDone(true);
@@ -98,7 +159,7 @@ export default function DashboardPage() {
               </p>
               <button
                 type="button"
-                onClick={() => setModalOpen(true)}
+                onClick={openAddPlot}
                 className="mt-5 inline-flex items-center gap-2 rounded-lg bg-navy px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy-mid"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
@@ -129,7 +190,7 @@ export default function DashboardPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => setModalOpen(true)}
+                      onClick={openAddPlot}
                       className="flex w-28 flex-col items-center justify-center gap-1 rounded-xl bg-navy text-sm font-semibold text-white hover:bg-navy-mid"
                     >
                       <Plus className="h-6 w-6" aria-hidden="true" />
@@ -152,21 +213,46 @@ export default function DashboardPage() {
               <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold text-slate-900">Plots</h2>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      downloadPlotsExcel(plots).catch(() => {});
-                    }}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-navy hover:bg-slate-50"
-                  >
-                    <Download className="h-4 w-4" aria-hidden="true" />
-                    Export Excel
-                  </button>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        downloadPlotsExcel(plots).catch(() => {});
+                      }}
+                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-navy hover:bg-slate-50"
+                    >
+                      <Download className="h-4 w-4" aria-hidden="true" />
+                      Export Excel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDdsOpen(true)}
+                      disabled={!canExportDds}
+                      title={canExportDds ? "Due Diligence Statement for the checked plots" : "Run the EUDR analysis on the checked plots first"}
+                      className="inline-flex items-center gap-2 rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-mid disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <FileCheck2 className="h-4 w-4" aria-hidden="true" />
+                      Export DDS
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full min-w-[640px] text-left text-sm">
                     <thead>
                       <tr className="border-b border-slate-100 text-[11px] uppercase tracking-wider text-slate-400">
+                        <th className="w-10 py-3 pr-4 font-medium">
+                          <input
+                            type="checkbox"
+                            aria-label="Select all valid plots"
+                            checked={allSelected}
+                            disabled={selectable.length === 0}
+                            onChange={toggleAll}
+                            ref={(el) => {
+                              if (el) el.indeterminate = selected.length > 0 && !allSelected;
+                            }}
+                            className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-navy disabled:cursor-not-allowed"
+                          />
+                        </th>
                         <th className="py-3 pr-4 font-medium">No</th>
                         <th className="py-3 pr-4 font-medium">Area</th>
                         <th className="py-3 pr-4 font-medium">Duplicate Vertices</th>
@@ -177,6 +263,17 @@ export default function DashboardPage() {
                     <tbody>
                       {plots.map((plot, i) => (
                         <tr key={plot.id} className="border-b border-slate-50 last:border-0">
+                          <td className="py-4 pr-4">
+                            <input
+                              type="checkbox"
+                              aria-label={`Select plot ${i + 1}`}
+                              title={plot.isValid ? undefined : "Invalid geometry — can't be analyzed"}
+                              checked={plot.isValid && !excluded.has(plot.id)}
+                              disabled={!plot.isValid}
+                              onChange={() => toggle(plot.id)}
+                              className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-navy disabled:cursor-not-allowed disabled:opacity-40"
+                            />
+                          </td>
                           <td className="py-4 pr-4 text-slate-700">{i + 1}</td>
                           <td className="py-4 pr-4 font-medium text-slate-700">
                             {plot.areaHa.toFixed(2)} ha
@@ -195,11 +292,23 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={startEudr}
-                className="mt-6 flex w-full items-center justify-between rounded-2xl bg-navy px-8 py-6 text-lg font-bold text-white transition-colors hover:bg-navy-mid"
+                disabled={selected.length === 0}
+                className="mt-6 flex w-full items-center justify-between gap-4 rounded-2xl bg-navy px-8 py-6 text-lg font-bold text-white transition-colors hover:bg-navy-mid disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-navy"
               >
                 Run EUDR Analysis
-                <ArrowRight className="h-6 w-6" aria-hidden="true" />
+                <span className="flex items-center gap-4">
+                  <span className="text-right text-sm font-medium text-white/70">
+                    {selected.length} of {selectable.length} plot
+                    {selectable.length === 1 ? "" : "s"} · {selectedArea.toFixed(2)} ha
+                  </span>
+                  <ArrowRight className="h-6 w-6 shrink-0" aria-hidden="true" />
+                </span>
               </button>
+              {runError && (
+                <p role="alert" className="mt-3 text-center text-sm font-medium text-red-600">
+                  {runError}
+                </p>
+              )}
             </>
           )}
         </div>
@@ -227,9 +336,30 @@ export default function DashboardPage() {
         steps={eudrSteps}
         onComplete={() => {
           setEudrRunning(false);
-          router.push("/dashboard/eudr");
+          if (quotaAfterRun.current) setQuotaBlock(quotaAfterRun.current);
+          else router.push("/dashboard/eudr");
         }}
       />
+
+      {quotaBlock && (
+        <Popup
+          icon={<Lock className="h-6 w-6 text-amber-600" aria-hidden="true" />}
+          tone="bg-amber-100 text-amber-600"
+          title={quotaBlock.paid ? "Not enough quota" : "Free allowance exceeded"}
+          body={
+            quotaBlock.paid
+              ? "The checked plots need more than your plan has left. Uncheck some plots, or choose a plan with more quota."
+              : `The checked plots need more than the ${quotaBlock.remainingHa.toFixed(2)} ha left of your free ${FREE_QUOTA_HA} ha allowance (plots you already analyzed don't count again). Uncheck some plots, or upgrade to analyze more.`
+          }
+          primaryLabel="View plans"
+          onPrimary={() => router.push("/checkout")}
+          onClose={() => setQuotaBlock(null)}
+        />
+      )}
+
+      <DdsModal open={ddsOpen} onClose={() => setDdsOpen(false)} plots={selected} />
+
+      {consentModal}
     </>
   );
 }

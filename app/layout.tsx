@@ -19,7 +19,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "Averos — Your land data, made actionable",
   description:
-    "From deforestation alerts to GHG emission reports — get science-backed compliance checks for every plot without the spreadsheet chaos.",
+    "From deforestation alerts to land legality checks — get science-backed EUDR compliance for every plot without the spreadsheet chaos.",
 };
 
 export default function RootLayout({

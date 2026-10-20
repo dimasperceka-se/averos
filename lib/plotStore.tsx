@@ -111,7 +111,10 @@ export function PlotStoreProvider({ children }: { children: React.ReactNode }) {
   const addPlots = useCallback(
     (extra: Plot[]) => {
       setPlotsState((prev) => {
-        const next = [...prev, ...extra];
+        // Plot ids restart after a page reload, so renumber appended plots past
+        // the current maximum to keep ids unique (rows, selection, detail links).
+        let maxId = prev.reduce((m, p) => Math.max(m, p.id), 0);
+        const next = [...prev, ...extra.map((p) => ({ ...p, id: ++maxId }))];
         persist(next, false);
         return next;
       });

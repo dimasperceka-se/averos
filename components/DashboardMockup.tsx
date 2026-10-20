@@ -83,7 +83,7 @@ export default function DashboardMockup() {
           <div>
             <h3 className="text-lg font-bold text-navy">Analysis Results</h3>
             <p className="text-[11px] text-slate-400">
-              Rainfall · Deforestation · 2 analyses · Just now
+              Deforestation · Land Legality · 2 analyses · Just now
             </p>
           </div>
 

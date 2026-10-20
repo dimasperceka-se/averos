@@ -5,6 +5,7 @@ import { authorizePlots } from "@/lib/server/billing";
 import { plotsFromGeoJSON } from "@/lib/server/billingGeometry";
 import { findById } from "@/lib/server/userStore";
 import { sameOrigin } from "@/lib/server/http";
+import { hasConsent } from "@/lib/consent";
 
 export const runtime = "nodejs";
 export const maxDuration = 120; // upstream can take ~10s/call (Vercel hint)
@@ -12,13 +13,8 @@ export const maxDuration = 120; // upstream can take ~10s/call (Vercel hint)
 const BASE =
   process.env.ANALYSIS_API_BASE || "https://global-compliance-system.com";
 
-const ALLOWED = new Set([
-  "deforestation",
-  "protected-area",
-  "validate-geometry",
-  "rainfall",
-  "ghg-emission",
-]);
+// Rainfall and GHG emission are coming soon, so their endpoints stay closed.
+const ALLOWED = new Set(["deforestation", "protected-area", "validate-geometry"]);
 
 export async function POST(
   req: Request,
@@ -45,11 +41,19 @@ export async function POST(
     return NextResponse.json({ error: "Missing geojson" }, { status: 400 });
   }
 
+  const user = await findById(session.uid);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Plot data only leaves the browser once the user agreed to the data-use statement.
+  if (!hasConsent(user)) {
+    return NextResponse.json(
+      { error: "Please agree to the data-use statement first.", code: "consent_required" },
+      { status: 403 },
+    );
+  }
+
   if (type !== "validate-geometry") {
     try {
       const plots = plotsFromGeoJSON(body.geojson);
-      const user = await findById(session.uid);
-      if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       const decision = await authorizePlots(session.uid, plots, true, user.freeUsedHa || 0);
       if (decision === "payment") return NextResponse.json({ error: "Payment or additional quota required." }, { status: 402 });
     } catch {
