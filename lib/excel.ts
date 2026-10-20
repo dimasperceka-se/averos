@@ -2,7 +2,7 @@ import { geometryIssues, type Plot } from "./geo";
 import type { SurveyData } from "./plotStore";
 import type { AnalysisKey } from "./data";
 
-const n = (v: number | undefined) => (typeof v === "number" ? Number(v.toFixed(3)) : "-");
+const n = (v: number | null | undefined) => (typeof v === "number" ? Number(v.toFixed(3)) : "-");
 
 /** Build and download an .xlsx compliance report from analyzed plots. */
 export async function downloadPlotsExcel(
@@ -21,8 +21,6 @@ export async function downloadPlotsExcel(
   const rows = plots.map((p, i) => {
     const d = p.eudr?.deforestation;
     const pa = p.eudr?.protectedArea;
-    const r = p.eudr?.rainfall;
-    const g = p.eudr?.ghg;
     const ok = p.isValid;
     return {
       No: i + 1,
@@ -36,8 +34,6 @@ export async function downloadPlotsExcel(
       "SBTN Loss (ha)": cell(ok, "deforestation", n(d?.sbtn.ha)),
       "Land Legality": cell(ok, "legality", pa?.status ?? "-"),
       "WDPA Categories": cell(ok, "legality", pa?.categories?.join(", ") || "-"),
-      "Rainfall Mean (mm)": cell(ok, "rainfall", n(r?.meanMm)),
-      "GHG Total (tCO2e)": cell(ok, "ghg", n(g?.totalTco2e)),
     };
   });
 

@@ -13,7 +13,7 @@ export default function ComingSoon() {
           <span aria-hidden="true" className="h-px flex-1 bg-slate-200" />
         </div>
 
-        <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           {comingSoonTypes.map((type) => (
             <li
               key={type.title}

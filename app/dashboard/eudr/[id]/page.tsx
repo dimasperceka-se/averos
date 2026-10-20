@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { usePlotStore } from "@/lib/plotStore";
 import { geometryIssues, type Plot } from "@/lib/geo";
+import { formatAmount } from "@/lib/format";
 
 const PlotDisplayMap = dynamic(() => import("@/components/PlotDisplayMap"), {
   ssr: false,
@@ -18,11 +19,12 @@ const PlotDisplayMap = dynamic(() => import("@/components/PlotDisplayMap"), {
 
 type TabKey = "rainfall" | "deforestation" | "ghg" | "legality";
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "rainfall", label: "Rainfall" },
+const TABS: { key: TabKey; label: string; soon?: boolean }[] = [
   { key: "deforestation", label: "Deforestation" },
-  { key: "ghg", label: "GHG Emissions" },
   { key: "legality", label: "Legality Analysis" },
+  // Coming soon — shown, but not selectable yet.
+  { key: "rainfall", label: "Rainfall", soon: true },
+  { key: "ghg", label: "GHG Emissions", soon: true },
 ];
 
 type TabContent = {
@@ -30,14 +32,22 @@ type TabContent = {
   tiles: { label: string; value: string; sub?: string }[];
 };
 
-const fmt = (n: number) =>
-  n.toLocaleString(undefined, { maximumFractionDigits: 1 });
+const fmt = formatAmount;
+const fmtOpt = (n: number | null) => (n === null ? "—" : fmt(n));
 const titleCase = (s: string) =>
   s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 const NO_DATA: TabContent = {
   banner: {
     title: "Not analyzed yet",
     description: "Run the EUDR analysis from the dashboard to populate this section.",
+  },
+  tiles: [],
+};
+const NO_RAINFALL: TabContent = {
+  banner: {
+    title: "No rainfall data for this location",
+    description:
+      "Satellite rainfall data only covers latitudes 50°S–50°N, so this plot could not be measured.",
   },
   tiles: [],
 };
@@ -50,22 +60,24 @@ function buildTabContent(plot: Plot): Record<TabKey, TabContent> {
   const highRisk = (d?.riskLevel ?? "").toLowerCase() === "high";
 
   return {
-    rainfall: r
-      ? {
-          banner: {
-            title: "Rainfall analysis complete",
-            description: r.period
-              ? `Annual precipitation measured across the plot (${r.period.start} – ${r.period.end}).`
-              : "Annual precipitation measured across the plot using satellite data.",
+    rainfall: !r
+      ? NO_DATA
+      : r.meanMm === null
+        ? NO_RAINFALL
+        : {
+            banner: {
+              title: "Rainfall analysis complete",
+              description: r.period
+                ? `Annual precipitation measured across the plot (${r.period.start} – ${r.period.end}).`
+                : "Annual precipitation measured across the plot using satellite data.",
+            },
+            tiles: [
+              { label: "Annual Mean", value: fmtOpt(r.meanMm), sub: "mm" },
+              { label: "Minimum", value: fmtOpt(r.minMm), sub: "mm" },
+              { label: "Maximum", value: fmtOpt(r.maxMm), sub: "mm" },
+              { label: "Std. Deviation", value: r.stdMm === null ? "—" : `±${fmt(r.stdMm)}`, sub: "mm" },
+            ],
           },
-          tiles: [
-            { label: "Annual Mean", value: fmt(r.meanMm), sub: "mm" },
-            { label: "Minimum", value: fmt(r.minMm), sub: "mm" },
-            { label: "Maximum", value: fmt(r.maxMm), sub: "mm" },
-            { label: "Std. Deviation", value: `±${fmt(r.stdMm)}`, sub: "mm" },
-          ],
-        }
-      : NO_DATA,
     deforestation: d
       ? {
           banner: highRisk
@@ -149,7 +161,7 @@ export default function EudrPlotDetailPage({
   const { id } = use(params);
   const { plots } = usePlotStore();
   const plot = plots.find((p) => String(p.id) === id);
-  const [tab, setTab] = useState<TabKey>("rainfall");
+  const [tab, setTab] = useState<TabKey>("deforestation");
 
   if (!plot) {
     return (
@@ -174,7 +186,18 @@ export default function EudrPlotDetailPage({
     [0, 0],
   );
   const d = plot.eudr?.deforestation;
+  const pa = plot.eudr?.protectedArea;
   const highRisk = (d?.riskLevel ?? "").toLowerCase() === "high";
+  // EUDR needs both: no post-2020 deforestation and no protected-area overlap.
+  const eudrStatus = !plot.isValid
+    ? "Not analyzed"
+    : !d && !pa
+      ? "—"
+      : highRisk || pa?.status === "non_compliant"
+        ? "Non-Compliant"
+        : pa?.status === "indicative"
+          ? "Review"
+          : "Compliant";
 
   const info: { label: string; value: string }[] = [
     { label: "Plot Name", value: plot.name },
@@ -185,16 +208,7 @@ export default function EudrPlotDetailPage({
       value: plot.isValid ? "Valid" : geometryIssues(plot).join(", "),
     },
     { label: "Data Source", value: "GeoJSON" },
-    {
-      label: "EUDR Status",
-      value: !plot.isValid
-        ? "Not analyzed"
-        : d
-          ? highRisk
-            ? "Non-Compliant"
-            : "Compliant"
-          : "—",
-    },
+    { label: "EUDR Status", value: eudrStatus },
     { label: "Risk Level", value: !plot.isValid ? "Not analyzed" : (d?.riskLevel ?? "—") },
     { label: "Country", value: "Indonesia" },
     { label: "Centroid", value: `${centroid[1].toFixed(4)}, ${centroid[0].toFixed(4)}` },
@@ -244,14 +258,22 @@ export default function EudrPlotDetailPage({
               role="tab"
               aria-selected={tab === t.key}
               type="button"
+              disabled={t.soon}
               onClick={() => setTab(t.key)}
               className={`-mb-px border-b-2 pb-3 text-sm font-semibold transition-colors ${
-                tab === t.key
-                  ? "border-navy text-navy"
-                  : "border-transparent text-slate-400 hover:text-slate-600"
+                t.soon
+                  ? "cursor-not-allowed border-transparent text-slate-300"
+                  : tab === t.key
+                    ? "border-navy text-navy"
+                    : "border-transparent text-slate-400 hover:text-slate-600"
               }`}
             >
               {t.label}
+              {t.soon && (
+                <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                  Soon
+                </span>
+              )}
             </button>
           ))}
         </div>

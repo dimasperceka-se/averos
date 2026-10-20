@@ -13,6 +13,16 @@ const num = (v: unknown): number => {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 };
+/** Like num(), but keeps "no data" (null / missing) distinct from a real 0. */
+const numOrNull = (v: unknown): number | null => {
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+class AnalysisError extends Error {
+  constructor(message: string, public status: number) { super(message); }
+}
 
 async function callAnalysis(
   type: string,
@@ -24,7 +34,7 @@ async function callAnalysis(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ geojson, filename }),
   });
-  if (!res.ok) throw new Error(`${type} failed (HTTP ${res.status})`);
+  if (!res.ok) throw new AnalysisError(`${type} failed (HTTP ${res.status})`, res.status);
   return res.json();
 }
 
@@ -58,8 +68,11 @@ export async function validateGeometry(
   }
 }
 
-/** Result of an EUDR run: analyzed plots + any selected analyses that failed. */
-export type EudrRun = { plots: Plot[]; failed: AnalysisKey[] };
+/**
+ * Result of an EUDR run: analyzed plots + any selected analyses that failed.
+ * paymentRequired: the server refused the plots for lack of quota (HTTP 402).
+ */
+export type EudrRun = { plots: Plot[]; failed: AnalysisKey[]; paymentRequired: boolean };
 
 const obj = (v: unknown): Record<string, unknown> =>
   v && typeof v === "object" ? (v as Record<string, unknown>) : {};
@@ -70,14 +83,24 @@ export async function runEudr(plots: Plot[], keys: AnalysisKey[]): Promise<EudrR
   // Only plots with valid geometry are sent for analysis. Invalid plots are
   // returned untouched (no `eudr`) so the report can show their issues + skip.
   const analyzable = plots.filter((p) => p.isValid);
-  if (analyzable.length === 0) return { plots, failed: [] };
+  if (analyzable.length === 0) return { plots, failed: [], paymentRequired: false };
 
-  const fc = featureCollectionFromPlots(analyzable);
+  // Plots from separate uploads can share a plot_id (every file starts at
+  // plot-0), so tag each feature with an id unique to this request.
+  const fc = featureCollectionFromPlots(
+    analyzable.map((p, i) => ({ ...p, plotId: `req-${i}` })),
+  );
   const filename = "plots.geojson";
   const want = new Set(keys);
 
+  let paymentRequired = false;
   const fetchIf = (enabled: boolean, endpoint: string) =>
-    enabled ? callAnalysis(endpoint, fc, filename).catch(() => null) : Promise.resolve(null);
+    enabled
+      ? callAnalysis(endpoint, fc, filename).catch((e) => {
+          if (e instanceof AnalysisError && e.status === 402) paymentRequired = true;
+          return null;
+        })
+      : Promise.resolve(null);
 
   const [defoJson, protJson, rainJson, ghgJson] = await Promise.all([
     fetchIf(want.has("deforestation"), "deforestation"),
@@ -94,8 +117,8 @@ export async function runEudr(plots: Plot[], keys: AnalysisKey[]): Promise<EudrR
   if (want.has("rainfall") && !rainJson) failed.push("rainfall");
   if (want.has("ghg") && !ghgJson) failed.push("ghg");
 
-  // The API drops our plot_id (echoes "unknown"), so match by plot_id when it
-  // lines up and fall back to position within the analyzable subset.
+  // Match results by the per-request plot_id the API echoes back, falling back
+  // to position within the analyzable subset.
   const defoMap = defoJson ? indexByPlotId(defoJson) : new Map();
   const protMap = protJson ? indexByPlotId(protJson) : new Map();
   const rainMap = rainJson ? indexByPlotId(rainJson) : new Map();
@@ -113,7 +136,7 @@ export async function runEudr(plots: Plot[], keys: AnalysisKey[]): Promise<EudrR
     const pick = (
       map: Map<string, Record<string, unknown>>,
       arr: Record<string, unknown>[],
-    ) => map.get(p.plotId) ?? arr[at];
+    ) => map.get(`req-${at}`) ?? arr[at];
 
     const eudr: EudrResult = {};
 
@@ -155,10 +178,10 @@ export async function runEudr(plots: Plot[], keys: AnalysisKey[]): Promise<EudrR
         | { start_date?: string; end_date?: string }
         | undefined;
       eudr.rainfall = {
-        meanMm: num(r.rainfall_mean_mm),
-        minMm: num(r.rainfall_min_mm),
-        maxMm: num(r.rainfall_max_mm),
-        stdMm: num(r.rainfall_std_mm),
+        meanMm: numOrNull(r.rainfall_mean_mm),
+        minMm: numOrNull(r.rainfall_min_mm),
+        maxMm: numOrNull(r.rainfall_max_mm),
+        stdMm: numOrNull(r.rainfall_std_mm),
         areaHa: num(r.area_hectares),
         period: period
           ? { start: String(period.start_date ?? ""), end: String(period.end_date ?? "") }
@@ -189,5 +212,5 @@ export async function runEudr(plots: Plot[], keys: AnalysisKey[]): Promise<EudrR
     return { ...p, eudr };
   });
 
-  return { plots: merged, failed };
+  return { plots: merged, failed, paymentRequired };
 }

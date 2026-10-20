@@ -50,10 +50,10 @@ export const heroChips: HeroChip[] = [
     position: "top-[14%] right-[6%]",
   },
   {
-    icon: CloudRain,
-    label: "Annual Rainfall",
-    value: "1,280 mm",
-    tint: "bg-sky-500/20 text-sky-300",
+    icon: ShieldCheck,
+    label: "Land Legality",
+    value: "Compliant",
+    tint: "bg-pink-500/20 text-pink-300",
     position: "top-[34%] left-[2%]",
   },
   {
@@ -69,7 +69,11 @@ export const heroChips: HeroChip[] = [
 /*  EUDR compliance analyses (live)                                           */
 /* -------------------------------------------------------------------------- */
 
-/** Analysis identifiers; `endpoint` maps to the FastAPI route /api/v1/<endpoint>. */
+/**
+ * Analysis identifiers; `endpoint` maps to the FastAPI route /api/v1/<endpoint>.
+ * "ghg" and "rainfall" are coming soon: their result mapping is kept, but they
+ * are not offered in `eudrAnalyses` (and the proxy rejects their endpoints).
+ */
 export type AnalysisKey = "deforestation" | "legality" | "ghg" | "rainfall";
 
 export type AnalysisType = {
@@ -101,28 +105,8 @@ export const eudrAnalyses: AnalysisType[] = [
     title: "Land Legality Analysis",
     caption: "Conservation zone check",
     description:
-      "Check for overlaps with national parks, wildlife reserves, and conservation zones — with exact distance and area reported.",
+      "Check for overlaps with national parks, wildlife reserves, and other protected areas (WDPA) — including the IUCN category of each overlap.",
     tile: "bg-pink-100 text-pink-600",
-  },
-  {
-    key: "ghg",
-    endpoint: "ghg-emission",
-    icon: Cloud,
-    title: "GHG Emission",
-    caption: "Greenhouse gas emission estimates",
-    description:
-      "Estimate emissions associated with each plot to support your compliance and reporting workflows.",
-    tile: "bg-lime-100 text-lime-600",
-  },
-  {
-    key: "rainfall",
-    endpoint: "rainfall",
-    icon: CloudRain,
-    title: "Rainfall Analysis",
-    caption: "Precipitation intelligence per polygon",
-    description:
-      "Get pixel-level annual rainfall data — mean, min, max, and variability — for every plot you upload.",
-    tile: "bg-sky-100 text-sky-600",
   },
 ];
 
@@ -141,6 +125,8 @@ export type ComingSoonType = {
 };
 
 export const comingSoonTypes: ComingSoonType[] = [
+  { icon: Cloud, title: "GHG Emission" },
+  { icon: CloudRain, title: "Rainfall Analysis" },
   { icon: Leaf, title: "Biomass" },
   { icon: Flame, title: "Fire Detection" },
   { icon: Sprout, title: "Crop Health" },
@@ -207,11 +193,11 @@ export type DashboardResultTile = {
 
 export const dashboardResultTiles: DashboardResultTile[] = [
   {
-    label: "Rainfall Analysis",
-    value: "2,450 mm",
-    caption: "Annual mean across all plots",
-    badge: "Data Ready",
-    badgeTint: "bg-sky-100 text-sky-700",
+    label: "Land Legality",
+    value: "0 overlaps",
+    caption: "No protected-area overlap",
+    badge: "Compliant",
+    badgeTint: "bg-pink-100 text-pink-700",
   },
   {
     label: "Deforestation",
@@ -223,9 +209,9 @@ export const dashboardResultTiles: DashboardResultTile[] = [
 ];
 
 export const dashboardInsights: string[] = [
-  "Polygon 1 has the highest rainfall variance (±312 mm) — monitor for seasonal drought stress.",
+  "All plots are free of tree-cover loss after the EUDR cut-off date (31 Dec 2020).",
   "No protected-area overlap detected — plots are compliant with EUDR conservation requirements.",
-  "Recommend running GHG Emission analysis to complete your compliance package.",
+  "Your plots are ready for an EUDR due diligence statement.",
 ];
 
 /* -------------------------------------------------------------------------- */

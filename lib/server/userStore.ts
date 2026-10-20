@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { randomBytes, randomUUID } from "crypto";
 import { dataDir } from "./dataDir";
+import type { DataConsent } from "../consent";
 
 export type User = {
   id: string;
@@ -17,6 +18,8 @@ export type User = {
   resetTokenHash?: string | null;
   resetExpires?: number | null;
   resetRequestedAt?: number | null;
+  // Agreement to store and reuse uploaded plot data (see lib/consent.ts).
+  dataConsent?: DataConsent | null;
 };
 
 const DATA_DIR = dataDir();

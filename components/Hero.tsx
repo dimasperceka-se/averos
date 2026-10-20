@@ -37,8 +37,8 @@ export default function Hero() {
             <span className="text-accent">Stop Guessing.</span>
           </h1>
           <p className="mt-6 max-w-md text-base leading-relaxed text-slate-300 sm:text-lg">
-            From deforestation alerts to GHG emission reports — get
-            science-backed compliance checks without the spreadsheet chaos
+            From deforestation alerts to land legality checks — get
+            science-backed EUDR compliance without the spreadsheet chaos
           </p>
         </div>
 

@@ -11,6 +11,9 @@ import { persistPlots } from "@/lib/plotsClient";
 import { authorize } from "@/lib/usageClient";
 import AddPlotModal from "./AddPlotModal";
 import AnalyzingOverlay from "./AnalyzingOverlay";
+import { useConsentGate } from "./ConsentGate";
+import Popup from "./Popup";
+import { FREE_QUOTA_HA } from "@/lib/quota";
 
 const DEFAULT_SELECTED = eudrAnalyses.map((a) => a.key);
 
@@ -26,6 +29,7 @@ export default function AnalysisTypes({ authed = false }: { authed?: boolean }) 
   const [geoFailed, setGeoFailed] = useState(false);
   const [paymentNeeded, setPaymentNeeded] = useState(false);
   const outcomeRef = useRef<Outcome>("fail");
+  const { ensureConsent, consentModal } = useConsentGate();
 
   const toggle = (key: AnalysisKey) =>
     setSelected((prev) =>
@@ -38,9 +42,10 @@ export default function AnalysisTypes({ authed = false }: { authed?: boolean }) 
   );
 
   // Login gate: must be signed in to run a compliance check.
-  const onRunClick = () => {
+  const onRunClick = async () => {
     if (!authed) router.push("/login?next=/");
-    else setModalOpen(true);
+    // Ask for the data-use consent (once per account) before any plot is sent.
+    else if (await ensureConsent()) setModalOpen(true);
   };
 
   const handleAnalyze = async (fc: FeatureCollection, filename: string) => {
@@ -64,19 +69,20 @@ export default function AnalysisTypes({ authed = false }: { authed?: boolean }) 
       setIsBulk(validPlots.length > 1);
 
       if (validPlots.length === 0) {
-        // Nothing analyzable — go straight to the report so the user sees each
-        // plot's geometry issue and a clear "not analyzed" note. No quota spent.
-        outcomeRef.current = "report";
+        // Nothing analyzable — the dashboard lists each plot's geometry issue.
+        // No quota spent.
+        outcomeRef.current = "dashboard";
         return;
       }
 
 
-      // Server decides routing (the 4 ha quota gate is enforced server-side).
+      // Server decides routing (the free-quota gate is enforced server-side).
+      // Free-tier plots within the allowance get the dashboard, like paid ones.
       const auth = await authorize(validPlots);
       outcomeRef.current = auth
-        ? auth.decision === "paid"
+        ? auth.decision === "paid" || auth.decision === "report"
           ? "dashboard"
-          : auth.decision // "survey" | "report" | "payment"
+          : auth.decision // "survey" | "payment"
         : "fail";
     } catch {
       outcomeRef.current = "fail";
@@ -227,56 +233,9 @@ export default function AnalysisTypes({ authed = false }: { authed?: boolean }) 
           onClose={() => setPaymentNeeded(false)}
         />
       )}
-    </section>
-  );
-}
 
-function Popup({
-  icon,
-  tone,
-  title,
-  body,
-  primaryLabel,
-  onPrimary,
-  onClose,
-}: {
-  icon: React.ReactNode;
-  tone: string;
-  title: string;
-  body: string;
-  primaryLabel: string;
-  onPrimary: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[210] flex items-center justify-center bg-slate-900/50 p-4"
-      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-2xl">
-        <span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${tone}`}>
-          {icon}
-        </span>
-        <h2 className="mt-4 text-lg font-bold text-slate-900">{title}</h2>
-        <p className="mt-1 text-sm text-slate-500">{body}</p>
-        <div className="mt-5 flex justify-center gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-semibold text-navy hover:bg-slate-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onPrimary}
-            className="rounded-lg bg-navy px-5 py-2.5 text-sm font-semibold text-white hover:bg-navy-mid"
-          >
-            {primaryLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+      {consentModal}
+    </section>
   );
 }
 
@@ -299,8 +258,8 @@ function PaymentNeededPopup({ onPay, onClose }: { onPay: () => void; onClose: ()
     <Popup
       icon={<Lock className="h-6 w-6 text-amber-600" aria-hidden="true" />}
       tone="bg-amber-100 text-amber-600"
-      title="Free quota used up"
-      body="You've analyzed your free 4 ha allowance. Upgrade to keep analyzing more plots and unlock the dashboard with Excel export."
+      title="Free allowance exceeded"
+      body={`Your free allowance covers ${FREE_QUOTA_HA} ha in total, in one plot or several. These plots go beyond what's left — upgrade to keep analyzing more plots.`}
       primaryLabel="Go to payment"
       onPrimary={onPay}
       onClose={onClose}

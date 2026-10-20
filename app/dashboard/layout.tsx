@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/server/session";
-import { billingSummary } from "@/lib/server/billing";
 
-/** Server gate: the dashboard (and EUDR detail) is a paid-only feature. */
+/**
+ * Server gate: any signed-in user — free tier included — gets the dashboard,
+ * results and DDS export. Quota is enforced by the analysis API itself.
+ */
 export default async function DashboardLayout({
   children,
 }: {
@@ -10,7 +12,5 @@ export default async function DashboardLayout({
 }) {
   const session = await getSession();
   if (!session) redirect("/login?next=/dashboard");
-  const billing = await billingSummary(session.uid);
-  if (!billing.paid) redirect("/checkout");
   return <>{children}</>;
 }

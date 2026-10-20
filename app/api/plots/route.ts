@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/server/session";
 import { sameOrigin } from "@/lib/server/http";
 import { savePlots, type SavePlotInput } from "@/lib/server/db";
+import { findById } from "@/lib/server/userStore";
+import { hasConsent } from "@/lib/consent";
 
 export const runtime = "nodejs";
 
@@ -15,6 +17,10 @@ export async function POST(req: Request) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  // Plots are only stored for users who agreed to the data-use statement.
+  if (!hasConsent(await findById(session.uid))) {
+    return NextResponse.json({ error: "Consent required", code: "consent_required" }, { status: 403 });
   }
 
   let body: { plots?: Incoming[]; source?: string };

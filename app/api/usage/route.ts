@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/server/session";
 import { findById, type User } from "@/lib/server/userStore";
-import { billingSummary, authorizePlots } from "@/lib/server/billing";
+import { billingSummary, authorizePlots, freeUsedHa as ledgerFreeUsedHa } from "@/lib/server/billing";
+import { FREE_QUOTA_HA } from "@/lib/quota";
 import { billedPlots } from "@/lib/server/billingGeometry";
 import { sameOrigin } from "@/lib/server/http";
 
 export const runtime = "nodejs";
 
-const FREE_QUOTA_HA = 4;
-
 async function usageOf(u: User | null) {
-  const freeUsedHa = u?.freeUsedHa ?? 0;
+  // Legacy per-user counter plus the per-plot ledger the analysis gate uses.
+  const freeUsedHa = u ? (u.freeUsedHa ?? 0) + (await ledgerFreeUsedHa(u.id)) : 0;
   const paid = u ? (await billingSummary(u.id)).paid : false;
   return {
     freeUsedHa,
