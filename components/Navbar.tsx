@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LogOut, Menu, X } from "lucide-react";
-import { navLinks } from "@/lib/data";
+import { SHOW_AGRIPLOT, navLinks } from "@/lib/data";
 import { usePlotStore } from "@/lib/plotStore";
 
 export default function Navbar({
@@ -59,7 +59,7 @@ export default function Navbar({
               </a>
             </li>
           ))}
-          {authed && (
+          {authed && SHOW_AGRIPLOT && (
             <li>
               <Link
                 href="/agriplot"
@@ -150,7 +150,7 @@ export default function Navbar({
                 </a>
               </li>
             ))}
-            {authed && (
+            {authed && SHOW_AGRIPLOT && (
               <li>
                 <Link
                   href="/agriplot"

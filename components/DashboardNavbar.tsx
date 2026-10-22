@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LogOut } from "lucide-react";
-import { navLinks } from "@/lib/data";
+import { SHOW_AGRIPLOT, navLinks } from "@/lib/data";
 import { usePlotStore } from "@/lib/plotStore";
 
 export default function DashboardNavbar() {
@@ -54,14 +54,16 @@ export default function DashboardNavbar() {
               </Link>
             </li>
           ))}
-          <li>
-            <Link
-              href="/agriplot"
-              className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
-            >
-              AgriPlot Subscription
-            </Link>
-          </li>
+          {SHOW_AGRIPLOT && (
+            <li>
+              <Link
+                href="/agriplot"
+                className="text-sm font-medium text-slate-600 transition-colors hover:text-navy"
+              >
+                AgriPlot Subscription
+              </Link>
+            </li>
+          )}
           <li>
             <Link
               href="/contact"

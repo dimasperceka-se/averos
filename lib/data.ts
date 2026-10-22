@@ -22,6 +22,9 @@ import {
 
 export type NavLink = { label: string; href: string };
 
+/** AgriPlot Subscription is hidden for now: no nav links, /agriplot returns 404. */
+export const SHOW_AGRIPLOT = false;
+
 export const navLinks: NavLink[] = [
   { label: "Spatial Analysis", href: "/#features" },
   { label: "Averos Pricing", href: "/#pricing" },
