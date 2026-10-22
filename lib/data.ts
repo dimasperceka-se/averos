@@ -247,8 +247,8 @@ export const pricingTiers: PricingTier[] = [
   {
     name: "Pay As You Go",
     tagline: "For occasional users with no commitment",
-    idr: { amount: "268.200", unit: "/hectare" },
-    usd: { amount: "14.9", unit: "/hectare" },
+    idr: { amount: "88.200", unit: "/hectare" },
+    usd: { amount: "4.9", unit: "/hectare" },
     sub: "No monthly fee. No quota.",
     lines: ["Pay only when you run an analysis", "Billed per hectare analyzed"],
     features: [
@@ -261,8 +261,8 @@ export const pricingTiers: PricingTier[] = [
   {
     name: "Regular",
     tagline: "For occasional users with no commitment",
-    idr: { amount: "882.200", unit: "/bulan" },
-    usd: { amount: "49", unit: "/month" },
+    idr: { amount: "522.000", unit: "/bulan" },
+    usd: { amount: "29", unit: "/month" },
     sub: "Includes 100 ha quota per month",
     callout: {
       idr: "Extra Usage: Rp9.000/ha if you run out of quota per month",
@@ -280,8 +280,8 @@ export const pricingTiers: PricingTier[] = [
   {
     name: "Professional",
     tagline: "For organizations needing deep supply chain intelligence",
-    idr: { amount: "2.321.300", unit: "/bulan" },
-    usd: { amount: "129", unit: "/month" },
+    idr: { amount: "1.782.000", unit: "/bulan" },
+    usd: { amount: "99", unit: "/month" },
     sub: "Includes 500 ha quota per month",
     callout: {
       idr: "Extra Usage: Rp4.500/ha if you run out of quota per month",

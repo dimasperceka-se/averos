@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/server/session";
 import { sameOrigin } from "@/lib/server/http";
 import { findById } from "@/lib/server/userStore";
-import { activatePromo, billingSummary, cancelSubscription, confirmCheckout, createCheckout, quote } from "@/lib/server/billing";
+import { billingSummary, cancelSubscription, confirmCheckout, createCheckout, quote } from "@/lib/server/billing";
 import { BillingError } from "@/lib/server/paypal";
 import { billingTransaction } from "@/lib/server/billingStore";
 
@@ -25,7 +25,6 @@ export async function POST(req: Request) {
     const body = JSON.parse(raw);
     if (body.action === "quote") return Response.json(quote(body.plan, body.plots));
     if (body.action === "create") return Response.json(await createCheckout(session.uid, body));
-    if (body.action === "promo") return Response.json(await activatePromo(session.uid, body));
     if (body.action === "confirm" && typeof body.id === "string") return Response.json(await confirmCheckout(session.uid, body.id));
     if (body.action === "cancel" && typeof body.id === "string") return Response.json(await cancelSubscription(session.uid, body.id));
     if (body.action === "resume" && typeof body.id === "string") {

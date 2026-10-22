@@ -73,7 +73,7 @@ export async function knownResetToken(email: string, { expired = false } = {}) {
 }
 
 type Ring = [number, number][];
-/** ≈0.0895 ha near Bogor: $1.33 at $14.90/ha. */
+/** ≈0.0895 ha near Bogor: $0.44 at $4.90/ha. */
 export const SMALL_PLOT: Ring = [[106.8, -6.6], [106.80027, -6.6], [106.80027, -6.60027], [106.8, -6.60027]];
 /** ≈770 ha: above both the Regular (100 ha) and Professional (500 ha) quotas. */
 export const LARGE_PLOT: Ring = [[96.0, 4.0], [96.025, 4.0], [96.025, 4.025], [96.0, 4.025]];

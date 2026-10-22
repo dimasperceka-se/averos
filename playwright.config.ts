@@ -33,8 +33,6 @@ export default defineConfig({
       APP_URL: baseURL,
       PAYPAL_RETURN_BASE: baseURL,
       PAYPAL_ENV: "sandbox",
-      // The suite covers the paid PayPal flow, so keep the free programme off.
-      FREE_PROMO_UNTIL: "2000-01-01T00:00:00Z",
       SMTP_HOST: "127.0.0.1",
       SMTP_PORT: "9",
       NEXT_TELEMETRY_DISABLED: "1",

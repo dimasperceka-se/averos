@@ -5,12 +5,15 @@ import { BillingError, paypalEnvironment } from "./paypal";
 import { dataDir } from "./dataDir";
 
 export type Plan = "payg" | "regular" | "pro";
+/** "card": PayPal's guest card form (no PayPal account); "paypal": PayPal login. */
+export type PayMethod = "paypal" | "card";
 export type BilledPlot = { key: string; areaHa: number };
 export type Purchase = {
   id: string; uid: string; plan: Plan; amount: string; currency: string;
   plots: BilledPlot[]; createdAt: number; providerId?: string; approvalUrl?: string;
   planId?: string; status: string; captureId?: string; revoked?: boolean;
   periodId?: string; expiresAt?: number; used: Record<string, number>;
+  method?: PayMethod; // absent on records from before card payments (= "paypal")
 };
 export type BillingState = {
   purchases: Record<string, Purchase>;
