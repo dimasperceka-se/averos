@@ -1,11 +1,13 @@
-import { randomUUID } from "node:crypto";
 import { billedPlots } from "./billingGeometry";
-import { billingTransaction, type BillingState, type Purchase, type Plan, type BilledPlot } from "./billingStore";
+import { billingTransaction, type BillingState, type Purchase, type Plan, type BilledPlot, type PayMethod } from "./billingStore";
 import { BillingError, paypal, paypalEnvironment } from "./paypal";
-import { PROMO_STATUS, promoActive, promoEndsAt, promoPeriod } from "./promo";
 import { FREE_QUOTA_HA } from "../quota";
 
-export const PRICES = { payg: 14.9, regular: 49, pro: 129 };
+// Regular/Professional must match the PayPal plans (scripts/setup-paypal.mjs).
+export const PRICES = { payg: 4.9, regular: 29, pro: 99 };
+// Ledger records from the retired Hasbi Foundation free programme (Oct 2026):
+// never active, never block a PayPal subscription.
+const RETIRED_PROMO = "PROMO";
 export const QUOTAS = { regular: 100, pro: 500 };
 type Money = { value: string; currency_code: string };
 type Capture = { id: string; status: string; amount: Money };
@@ -29,52 +31,17 @@ export function quote(plan: unknown, input: unknown) {
 
 export function purchaseActive(p: Purchase, now = Date.now()): boolean {
   if (p.revoked) return false;
-  if (p.status === PROMO_STATUS) return promoActive(now);
   if (p.plan === "payg") return p.status === "COMPLETED";
   return ["ACTIVE", "CANCELLED", "EXPIRED"].includes(p.status) && !!p.expiresAt && p.expiresAt > now;
-}
-
-/** Free-programme quotas start over each month; reset a stale period in place. */
-function freshPromoPeriod(p: Purchase) {
-  if (p.status === PROMO_STATUS && p.periodId !== promoPeriod()) { p.periodId = promoPeriod(); p.used = {}; }
 }
 
 export async function billingSummary(uid: string) {
   return billingTransaction(state => {
     const own = Object.values(state.purchases).filter(p => p.uid === uid);
-    own.forEach(freshPromoPeriod);
-    const isPromo = (p: Purchase) => p.status === PROMO_STATUS;
     return {
       paid: own.some(p => purchaseActive(p)), environment: paypalEnvironment(),
-      promo: { active: promoActive(), endsAt: promoEndsAt() },
-      subscriptions: own.filter(p => p.plan !== "payg" && (p.providerId || (isPromo(p) && !p.revoked))).map(p => ({ id: p.id, plan: p.plan, status: p.status, active: purchaseActive(p), expiresAt: isPromo(p) ? promoEndsAt() : p.expiresAt, remainingHa: Math.max(0, QUOTAS[p.plan as "regular" | "pro"] - Object.values(p.used).reduce((s, n) => s + n, 0)) })),
+      subscriptions: own.filter(p => p.plan !== "payg" && p.providerId).map(p => ({ id: p.id, plan: p.plan, status: p.status, active: purchaseActive(p), expiresAt: p.expiresAt, remainingHa: Math.max(0, QUOTAS[p.plan as "regular" | "pro"] - Object.values(p.used).reduce((s, n) => s + n, 0)) })),
     };
-  });
-}
-
-/**
- * Activate the chosen plan at no cost while the Hasbi Foundation programme
- * runs. PAYG covers exactly the selected plots, as a paid order would; a free
- * Regular/Professional plan keeps its monthly quota. Switching between those
- * two changes the plan but keeps this month's usage.
- */
-export async function activatePromo(uid: string, input: { plan?: unknown; plots?: unknown }) {
-  if (!promoActive()) throw new BillingError("The free programme has ended.", 410);
-  const q = quote(input.plan, input.plots);
-  return billingTransaction(state => {
-    const base = { uid, amount: "0.00", currency: q.currency, createdAt: Date.now(), status: PROMO_STATUS };
-    if (q.plan === "payg") {
-      const id = randomUUID();
-      state.purchases[id] = { ...base, id, plan: "payg", plots: q.plots, used: {} };
-    } else {
-      const current = Object.values(state.purchases).find(p => p.uid === uid && p.status === PROMO_STATUS && !p.revoked && p.plan !== "payg");
-      if (current) current.plan = q.plan;
-      else {
-        const id = randomUUID();
-        state.purchases[id] = { ...base, id, plan: q.plan, plots: [], periodId: promoPeriod(), used: {} };
-      }
-    }
-    return { paid: true, plan: q.plan };
   });
 }
 
@@ -86,23 +53,25 @@ function returnBase() {
   return url.origin;
 }
 
-export async function createCheckout(uid: string, input: { plan?: unknown; plots?: unknown; amount?: unknown; requestId?: unknown }) {
+export async function createCheckout(uid: string, input: { plan?: unknown; plots?: unknown; amount?: unknown; requestId?: unknown; method?: unknown }) {
   const q = quote(input.plan, input.plots);
   if (q.amount !== input.amount) throw new BillingError("The quote changed. Please refresh and check the total.", 409);
+  const method: PayMethod = input.method === "card" ? "card" : "paypal";
+  // PayPal subscriptions have no guest card form; monthly plans need a PayPal account.
+  if (method === "card" && q.plan !== "payg") throw new BillingError("Card payment is available for pay-as-you-go. Monthly plans are paid with a PayPal account.");
   if (typeof input.requestId !== "string" || !/^[a-f0-9-]{36}$/.test(input.requestId)) throw new BillingError("Invalid checkout request.");
   const id = input.requestId;
   // Persist the request before calling PayPal, allowing retry after a timeout/crash.
   await billingTransaction(state => {
     const existing = state.purchases[id];
     if (existing) {
-      if (existing.uid !== uid || existing.plan !== q.plan || existing.amount !== q.amount || JSON.stringify(existing.plots) !== JSON.stringify(q.plots)) throw new BillingError("Checkout request does not match.", 409);
+      if (existing.uid !== uid || existing.plan !== q.plan || existing.amount !== q.amount || (existing.method ?? "paypal") !== method || JSON.stringify(existing.plots) !== JSON.stringify(q.plots)) throw new BillingError("Checkout request does not match.", 409);
       return;
     }
     // A CREATING record that never reached PayPal (failed call, abandoned retry) should not block a new plan.
     const abandoned = (p: Purchase) => p.status === "CREATING" && !p.providerId && Date.now() - p.createdAt > 120000;
-    // A free-programme plan never blocks a real PayPal subscription.
-    if (q.plan !== "payg" && Object.values(state.purchases).some(p => p.uid === uid && p.plan !== "payg" && !["CANCELLED", "EXPIRED", PROMO_STATUS].includes(p.status) && !abandoned(p))) throw new BillingError("You already have a subscription or pending checkout. Resume or cancel it first.", 409);
-    state.purchases[id] = { id, uid, plan: q.plan, amount: q.amount, currency: q.currency, plots: q.plots, createdAt: Date.now(), status: "CREATING", used: {} };
+    if (q.plan !== "payg" && Object.values(state.purchases).some(p => p.uid === uid && p.plan !== "payg" && !["CANCELLED", "EXPIRED", RETIRED_PROMO].includes(p.status) && !abandoned(p))) throw new BillingError("You already have a subscription or pending checkout. Resume or cancel it first.", 409);
+    state.purchases[id] = { id, uid, plan: q.plan, amount: q.amount, currency: q.currency, plots: q.plots, createdAt: Date.now(), status: "CREATING", used: {}, method };
   });
   return billingTransaction(async state => {
     const p = state.purchases[id];
@@ -113,11 +82,17 @@ export async function createCheckout(uid: string, input: { plan?: unknown; plots
     if (p.plan === "payg") {
       result = await paypal<Order>("/v2/checkout/orders", "POST", {
         intent: "CAPTURE", purchase_units: [{ custom_id: p.id, description: `Averos analysis — ${q.areaHa.toFixed(4)} ha`, amount: { currency_code: p.currency, value: p.amount } }],
-        payment_source: { paypal: { experience_context: { ...context, user_action: "PAY_NOW" } } },
+        // GUEST_CHECKOUT opens PayPal's debit/credit card form instead of the login page.
+        payment_source: { paypal: { experience_context: { ...context, user_action: "PAY_NOW", ...(method === "card" ? { landing_page: "GUEST_CHECKOUT" } : {}) } } },
       }, p.id);
     } else {
       const planId = process.env[p.plan === "regular" ? "PAYPAL_PLAN_REGULAR_ID" : "PAYPAL_PLAN_PRO_ID"];
       if (!planId) throw new BillingError("This subscription plan is not configured.", 503);
+      // Guard against a stale plan ID: PayPal must bill exactly the price shown here.
+      const plan = await paypal<{ status: string; billing_cycles?: { pricing_scheme?: { fixed_price?: Money } }[] }>(`/v1/billing/plans/${encodeURIComponent(planId)}`);
+      if (plan.status !== "ACTIVE" || plan.billing_cycles?.length !== 1 || !matchMoney(plan.billing_cycles[0].pricing_scheme?.fixed_price, p)) {
+        throw new BillingError("This subscription plan is not configured.", 503);
+      }
       p.planId = planId;
       result = await paypal<Subscription>("/v1/billing/subscriptions", "POST", { plan_id: planId, custom_id: p.id, application_context: { ...context, user_action: "SUBSCRIBE_NOW" } }, p.id);
     }
@@ -230,7 +205,6 @@ function coverage(state: BillingState, uid: string, plots: BilledPlot[], commit:
   const uncovered = plots.filter(p => !paygKeys.has(p.key));
   if (!uncovered.length) return "paid";
   for (const subscription of own.filter(p => p.plan !== "payg")) {
-    freshPromoPeriod(subscription);
     const fresh = uncovered.filter(p => subscription.used[p.key] === undefined);
     const total = Object.values(subscription.used).reduce((s, n) => s + n, 0) + fresh.reduce((s, p) => s + p.areaHa, 0);
     if (total <= QUOTAS[subscription.plan as "regular" | "pro"] + 1e-8) {

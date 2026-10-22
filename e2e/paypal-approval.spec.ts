@@ -16,8 +16,8 @@ test("a Sandbox buyer pays for a plot and gets dashboard access", async ({ page,
   await signedInAccount(page, "buyer");
   await seedPlots(page, [SMALL_PLOT], baseURL!);
   await page.goto("/checkout");
-  await expect(page.getByText("$1.33 USD")).toBeVisible();
-  await page.getByRole("button", { name: "Continue to PayPal" }).click();
+  await expect(page.getByText("$0.44 USD")).toBeVisible();
+  await page.getByRole("button", { name: "Pay with PayPal" }).click();
   await page.waitForURL(/sandbox\.paypal\.com/);
 
   await page.locator("#email").fill(buyerEmail!);
@@ -30,5 +30,5 @@ test("a Sandbox buyer pays for a plot and gets dashboard access", async ({ page,
   await page.waitForURL(new RegExp(`^${baseURL}/dashboard`), { timeout: 120_000 });
   const ledger = JSON.parse(await readFile(path.join(DATA_DIR, "billing", "sandbox", "ledger.json"), "utf8"));
   const purchases = Object.values(ledger.purchases) as { plan: string; amount: string; status: string }[];
-  expect(purchases.some((p) => p.plan === "payg" && p.amount === "1.33" && p.status === "COMPLETED")).toBeTruthy();
+  expect(purchases.some((p) => p.plan === "payg" && p.amount === "0.44" && p.status === "COMPLETED")).toBeTruthy();
 });

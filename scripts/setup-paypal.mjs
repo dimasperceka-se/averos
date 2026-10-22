@@ -42,29 +42,46 @@ const save = () => writeFile(file, JSON.stringify(setup, null, 2), { mode: 0o600
 await save();
 const output = {};
 
-const planIds = { regular: process.env.PAYPAL_PLAN_REGULAR_ID || setup.regularId, pro: process.env.PAYPAL_PLAN_PRO_ID || setup.proId };
-// The product is only needed to create plans; don't leave an orphan one when both plans exist.
-if (!setup.productId && (!planIds.regular || !planIds.pro)) {
-  const product = await api("/v1/catalogs/products", { name: "Averos land analysis", description: "Monthly land compliance analysis", type: "SERVICE", category: "SOFTWARE" }, setup.productRequest);
-  setup.productId = product.id; await save();
-}
-// Prices must match PRICES in lib/server/billing.ts.
-for (const [key, name, price] of [["regular", "Averos Regular — 100 ha/month", "49.00"], ["pro", "Averos Professional — 500 ha/month", "129.00"]]) {
+// Prices must match PRICES in lib/server/billing.ts. A PayPal plan keeps its
+// price, so a new price gets a new plan; existing subscribers stay on theirs.
+const PLANS = [["regular", "Averos Regular — 100 ha/month", "29.00"], ["pro", "Averos Professional — 500 ha/month", "99.00"]];
+const matches = (plan, price) => {
+  const c = plan.billing_cycles;
+  return plan.status === "ACTIVE" && c?.length === 1 && c[0].frequency.interval_unit === "MONTH" && c[0].frequency.interval_count === 1
+    && Number(c[0].pricing_scheme.fixed_price.value) === Number(price) && c[0].pricing_scheme.fixed_price.currency_code === "USD";
+};
+
+for (const [key, name, price] of PLANS) {
   const envKey = key === "regular" ? "PAYPAL_PLAN_REGULAR_ID" : "PAYPAL_PLAN_PRO_ID";
-  let id = planIds[key];
-  if (!id) {
-    const plan = await api("/v1/billing/plans", {
+  // Reuse the configured plan, or one this script already created at this price.
+  let plan;
+  for (const id of new Set([process.env[envKey], setup[key + "Id"]].filter(Boolean))) {
+    const candidate = await api("/v1/billing/plans/" + encodeURIComponent(id));
+    if (matches(candidate, price)) { plan = candidate; break; }
+    console.log(key + ": " + id + " does not bill USD " + price + "/month — a new plan is needed");
+    setup.productId ||= candidate.product_id; // keep using the same PayPal product
+  }
+  if (!plan) {
+    if (!setup.productId) {
+      const product = await api("/v1/catalogs/products", { name: "Averos land analysis", description: "Monthly land compliance analysis", type: "SERVICE", category: "SOFTWARE" }, setup.productRequest);
+      setup.productId = product.id;
+    }
+    // One idempotency key per plan and price, so re-runs never create duplicates.
+    const requestKey = key + "Request_" + price;
+    setup[requestKey] ||= randomUUID();
+    await save();
+    const created = await api("/v1/billing/plans", {
       product_id: setup.productId, name, status: "ACTIVE",
       billing_cycles: [{ frequency: { interval_unit: "MONTH", interval_count: 1 }, tenure_type: "REGULAR", sequence: 1, total_cycles: 0, pricing_scheme: { fixed_price: { value: price, currency_code: "USD" } } }],
       payment_preferences: { auto_bill_outstanding: false, payment_failure_threshold: 1 },
-    }, setup[key + "Request"]);
-    id = plan.id; setup[key + "Id"] = id; await save();
+    }, setup[requestKey]);
+    setup[key + "Id"] = created.id;
+    await save();
+    plan = await api("/v1/billing/plans/" + encodeURIComponent(created.id));
+    if (!matches(plan, price)) throw new Error("Plan pricing mismatch: " + key);
   }
-  const details = await api("/v1/billing/plans/" + encodeURIComponent(id));
-  const cycles = details.billing_cycles;
-  if (details.status !== "ACTIVE" || cycles?.length !== 1 || cycles[0].frequency.interval_unit !== "MONTH" || cycles[0].frequency.interval_count !== 1 || Number(cycles[0].pricing_scheme.fixed_price.value) !== Number(price) || cycles[0].pricing_scheme.fixed_price.currency_code !== "USD") throw new Error("Plan pricing mismatch: " + key);
-  output[envKey] = id;
-  console.log(key + ": configured and verified (USD " + price + "/month)");
+  output[envKey] = plan.id;
+  console.log(key + ": " + plan.id + " configured and verified (USD " + price + "/month)");
 }
 
 if (args["webhook-url"]) {
