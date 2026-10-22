@@ -8,7 +8,7 @@ import { FREE_QUOTA_HA } from "@/lib/quota";
 const CURRENCY_KEYS: CurrencyKey[] = ["idr", "usd"];
 
 export default function Pricing() {
-  const [cur, setCur] = useState<CurrencyKey>("idr");
+  const [cur, setCur] = useState<CurrencyKey>("usd");
 
   return (
     <section id="pricing" className="bg-[#F7F8FA]">
