@@ -1,6 +1,7 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { getSession } from "@/lib/server/session";
+import { SHOW_AGRIPLOT } from "@/lib/data";
 
 export const metadata = { title: "AgriPlot Map — Averos" };
 
@@ -8,6 +9,7 @@ export const metadata = { title: "AgriPlot Map — Averos" };
 const AGRIPLOT_URL = "https://app.sustainit.id/agri-plot-map";
 
 export default async function AgriPlotPage() {
+  if (!SHOW_AGRIPLOT) notFound();
   const session = await getSession();
   if (!session) redirect("/login?next=/agriplot");
   return (
