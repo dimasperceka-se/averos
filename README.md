@@ -43,6 +43,32 @@ lib/
 All repeated content (nav links, feature cards, pricing tiers, footer links) is
 defined once in [`lib/data.ts`](lib/data.ts) and rendered via `.map()`.
 
+## DDS Submission (EUIS)
+
+`/dashboard/dds` files Due Diligence Statements with the EU Information System
+(EUIS / TRACES) through its V4 SOAP web services, **Acceptance environment only**
+(there is no production endpoint in the code). Built from the public "EUDR
+Information System – Operator API Reference" and the V4 WSDL/XSDs.
+
+- Only valid plots that passed screening (no tree-cover loss after 2020, no
+  protected-area overlap) go into a draft. Plots live in the browser session, so
+  the draft keeps its own copy; area and plot key are recomputed on the server.
+- The EUIS connection (web-service username, authentication key, WebServiceClientId,
+  optional Web Service Access Identifier) is entered on the same page. The key is
+  sealed with AES-256-GCM (`EUIS_CREDENTIAL_ENC_KEY`) and never shown again.
+- Requests use WS-Security UsernameToken (PasswordDigest) with a timestamp.
+- Submit once: the statement is marked SUBMITTING with an internal reference before
+  the request leaves; an unclear outcome becomes "Check needed" and is resolved by
+  looking that reference up in EUIS, never by sending it again.
+- Status: first check one hour after submitting, then at most every 15 minutes
+  (EUIS guidance). Withdraw while EUIS allows it.
+- Opened account by account: `DDS_SUBMISSION_EMAILS` (emails, `@domain` entries or `*`).
+  Other accounts see the menu item as "Soon", and every DDS/EUIS API answers 403.
+- Free plan: up to 10 ha of distinct plots across filed statements; paid plans have no limit.
+- Stored in `.data/dds/` and mirrored to PostgreSQL (`dds_accounts`, `dds_statements`).
+- `EUIS_MOCK=1` + `EUIS_BASE_URL=<origin>/api/euis-mock` (never in production) runs a
+  local mock EUIS; the e2e suite uses it.
+
 ## Design tokens
 
 Defined in [`app/globals.css`](app/globals.css):

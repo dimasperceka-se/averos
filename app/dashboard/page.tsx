@@ -3,7 +3,8 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ArrowRight, ArrowUpRight, Download, FileCheck2, Lock, Plus, Shapes } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, ArrowUpRight, Download, FileCheck2, Lock, Plus, Send, Shapes } from "lucide-react";
 import { analysisByKey } from "@/lib/data";
 import { usePlotStore } from "@/lib/plotStore";
 import type { FeatureCollection, Plot } from "@/lib/geo";
@@ -11,6 +12,7 @@ import { runEudr, validateGeometry } from "@/lib/analysisClient";
 import { persistPlots } from "@/lib/plotsClient";
 import { downloadPlotsExcel } from "@/lib/excel";
 import { authorize } from "@/lib/usageClient";
+import { useDdsAccess } from "@/lib/ddsClient";
 import { FREE_QUOTA_HA } from "@/lib/quota";
 import DashboardNavbar from "@/components/DashboardNavbar";
 import AddPlotModal from "@/components/AddPlotModal";
@@ -32,6 +34,7 @@ const isInvalid = (p: Plot) => !p.isValid;
 
 export default function DashboardPage() {
   const router = useRouter();
+  const ddsAccess = useDdsAccess();
   const { plots, userName, analyses, addPlots, updatePlots, setEudrDone } =
     usePlotStore();
   const eudrSteps = analyses.map((k) => {
@@ -234,6 +237,28 @@ export default function DashboardPage() {
                       <FileCheck2 className="h-4 w-4" aria-hidden="true" />
                       Export DDS
                     </button>
+                    {ddsAccess === true ? (
+                      <Link
+                        href="/dashboard/dds"
+                        title="File a DDS with the EU Information System (Acceptance) for plots that passed screening"
+                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-navy hover:bg-slate-50"
+                      >
+                        <Send className="h-4 w-4" aria-hidden="true" />
+                        DDS Submission
+                      </Link>
+                    ) : (
+                      <span
+                        aria-disabled="true"
+                        title="Filing a DDS with the EU Information System is coming soon"
+                        className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-400"
+                      >
+                        <Send className="h-4 w-4" aria-hidden="true" />
+                        DDS Submission
+                        {ddsAccess === false && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-slate-500 uppercase">Soon</span>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="mt-4 overflow-x-auto">

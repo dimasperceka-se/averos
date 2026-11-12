@@ -153,6 +153,11 @@ function screenPlot(plot: Plot, index: number): DdsPlot {
   };
 }
 
+/** Screening of one plot: "passed" means no loss after the cut-off and no protected-area overlap. */
+export function plotScreening(plot: Plot): Screening {
+  return screenPlot(plot, 0).screening;
+}
+
 function reference(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
